@@ -11,6 +11,7 @@ so It **WILL NOT run on Arduino INO boards** ...
    - ssd1306 LCD I2C Screen
    - SPI uSD Card reader
    - ESP8266 Wifi module
+   - 2nd UART (two serial ports control)
    - Teensy ++2 module
 
 ![Dev Board](/images/devBoard.jpg)
