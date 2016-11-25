@@ -15,7 +15,7 @@ so It **WILL NOT run on Arduino INO boards** ...
 
 ![Dev Board](/images/devBoard.jpg)
 
-* It provides a regular BASIC shell, and can act as an HTTP Server to launch a 'web.bas' file
+* It provides a regular BASIC shell, and can act as an HTTP Server to launch a 'web.bas' file<br/>
   that outputs directly in the browser.
 
 ```
@@ -28,9 +28,9 @@ so It **WILL NOT run on Arduino INO boards** ...
 
 ![Web autorun script](/images/autorunWeb.jpg)
 
-* It also have 2 serial ports (MASTER / SLAVE) that can be hot-swapped with 'CINV' command.
-  note that CINIT <baud_rate> does ONLY set the "Software" Serial port & that the "Hardware" Serial port (USB),
-  is always @ 115200 bauds (you can change it in the code).
+* It also have 2 serial ports (MASTER / SLAVE) that can be hot-swapped with 'CINV' command.<br/>
+  note that CINIT <baud_rate> does ONLY set the "Software" Serial port & that the "Hardware" Serial port (USB),<br/>
+  is always @ 115200 bauds (you can change it in the code).<br/>
 
 ![Web + 2 serial ports control](/images/Web_2Serials.jpg)
 
