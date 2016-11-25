@@ -5,6 +5,16 @@
 //      ADDED : CAT "<file>" to list a file from sdcard w/o interpret it
 //      
 //      CHANGED BEHAVIOUR of FILES -> no more break the current PRGM (NOT a regular way for a BASIC !) 
+//      
+//      CINIT <bauds> -> init the alt. serialPort
+//      COUT   -> send a byte to alt. serialPort
+//      CLIST  -> list to alt. serialPort
+//      CPRINT -> print to init the alt. serialPort
+//      CINV   -> invert UART Vs SoftwareSerial (but no for CINIT)
+//      
+//      CINP -> TODO
+//      
+//      
 //
 // v0.14: 2013-11-07
 //      Input command always set the variable to 99

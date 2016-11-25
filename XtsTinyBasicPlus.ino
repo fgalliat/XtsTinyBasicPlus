@@ -405,6 +405,9 @@ void openTelnetServerAndWait(bool defScr,bool defSer) {
 
 // _____________________________________
 
+// if (true) altSerial becomes MASTER
+bool serialInverted = false;
+
 #ifdef ALT_SER_PORT
   // ADDED :
   //   KW_INIT, KW_INP, KW_OUT,
@@ -714,11 +717,11 @@ const static unsigned char keywords[] PROGMEM = {
 
 // Xtase ioFileDescriptor
 #ifdef ALT_SER_FILE
-  'I','N','I','T'+0x80,
-  'I','N','P'+0x80, // ====> TO MOVE TO FUNCTIONS !!!!!
-  'O','U','T'+0x80,
-  'L','L','I','S','T'+0x80,
-  'L','P','R','I','N','T'+0x80,
+  'C','I','N','I','T'+0x80,
+  'C','O','U','T'+0x80,
+  'C','L','I','S','T'+0x80,
+  'C','P','R','I','N','T'+0x80,
+  'C','I','N','V'+0x80, // invert hard Vs soft serial
 #endif
 
 // Xtase Esp8266 Wifi routines
@@ -765,8 +768,9 @@ enum {
 #endif
 
 #ifdef ALT_SER_FILE
-  KW_INIT, KW_INP, KW_OUT,
+  KW_INIT, KW_OUT,
   KW_LLIST, KW_LPRINT,
+  KW_CINV,
 #endif
 
 #ifdef WIFI_SUPPORT
@@ -1106,8 +1110,8 @@ static unsigned char print_quoted_string(void)
 // Xts Xts Xts Xts Xts Xts Xts Xts Xts Xts 
 static void lline_terminator(void)
 {
-  outchar(NL);
-  outchar(CR);
+  l_outchar(NL);
+  l_outchar(CR);
 }
 
 void lprintline()
@@ -1881,12 +1885,12 @@ interperateAtTxtpos:
     goto ioInit;
   case KW_OUT:
     goto ioOut;
-  case KW_INP:
-    goto ioInp;
   case KW_LLIST:
     goto ioList;
   case KW_LPRINT:
     goto ioPrint;
+  case KW_CINV: // invert serials Hard Vs Soft
+    goto ioInvert; 
 #endif
 
 #ifdef WIFI_SUPPORT
@@ -2390,12 +2394,11 @@ ioInit: // INIT 8000 => as INIT, "COM:", 8000, "B"
       altSerial.listen();
     #endif
   goto run_next_statement;
-  
-ioInp: // A = INP() => as A=INP(#1)
-    #ifdef ALT_SER_PORT
-    #endif
-  goto unimplemented;
-  
+
+ioInvert: 
+  serialInverted = !serialInverted;
+  goto run_next_statement;
+
 ioOut: // OUT 100 => as OUT #1,100
     // Get the value to send
     short value;
@@ -2877,8 +2880,11 @@ void setup() {
 static unsigned char breakcheck(void)
 {
 #ifdef ARDUINO
-  if(Serial.available())
-    return Serial.read() == CTRLC;
+  if ( !serialInverted ) {
+    if(Serial.available()) return Serial.read() == CTRLC;
+  } else {
+    if(altSerial.available()) return altSerial.read() == CTRLC;
+  }
   return 0;
 #else
 #ifdef __CONIO__
@@ -2926,8 +2932,11 @@ static int inchar()
   default:
     while(1)
     {
-      if(Serial.available())
-        return Serial.read();
+      if ( !serialInverted ) {
+        if(Serial.available()) return Serial.read();
+      } else {
+        if(altSerial.available()) return altSerial.read();
+      }
     }
   }
   
@@ -2962,13 +2971,17 @@ inchar_loadfinish:
 // Xts Xts Xts Xts Xts Xts Xts
 static void l_outchar(unsigned char c) {
   #ifdef ALT_SER_PORT
-    altSerial.write(c);
+    //altSerial.write(c);
+    if ( !serialInverted ) {
+      altSerial.write(c);
+    } else {
+      Serial.write(c);
+    }
   #endif
 }
 // Xts Xts Xts Xts Xts Xts Xts
 
-static void outchar(unsigned char c)
-{
+static void outchar(unsigned char c) {
   if( inhibitOutput ) return;
 
 #ifdef ARDUINO
@@ -2989,7 +3002,11 @@ static void outchar(unsigned char c)
   #endif /* ARDUINO */
 
     if ( !bufferedOutput ) {
-      Serial.write(c);
+      if ( !serialInverted ) {
+        Serial.write(c);
+      } else {
+        altSerial.write(c);
+      }
     } else {
       //outputBuffer += (char)c;
       outputBuffer[ outputBufferCursor++ ] = (char)c;
