@@ -2,6 +2,9 @@
 
 a fork of TinyBasic for Arduino by Xtase (fgalliat) @Nov 2016
 
+It actually uses 40KB of flash & 7K of RAM (statically allocated)
+so It **WILL NOT run on Arduino INO boards** ...
+
 (It's an early stage work, so it's dirty & not well documented)
 
 * added support for :

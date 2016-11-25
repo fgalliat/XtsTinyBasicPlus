@@ -730,6 +730,7 @@ const static unsigned char keywords[] PROGMEM = {
 
 // Xtase extended functions
   'D','E','L','E','T','E'+0x80,
+  'C','A','T'+0x80,
   
   0
 };
@@ -775,6 +776,7 @@ enum {
 
 // Xtase extended functions
   KW_DELETE,
+  KW_CAT,
 
   KW_DEFAULT /* always the final one*/
 };
@@ -1897,6 +1899,8 @@ interperateAtTxtpos:
 // XTase extended functions
   case KW_DELETE:
     goto sdDelete;
+  case KW_CAT:
+    goto sdCat;
 
   case KW_DEFAULT:
     goto assignment;
@@ -2637,6 +2641,31 @@ sdDelete:
     // remove the file if it exists
     if( SD.exists( (char *)filename )) {
       SD.remove( (char *)filename );
+    }
+    goto run_next_statement;
+ #else
+  goto unimplemented;
+ #endif
+
+sdCat:
+ #ifdef ENABLE_FILEIO
+    //unsigned char *filename;
+    // Work out the filename
+    expression_error = 0;
+    filename = filenameWord();
+    if(expression_error)
+      goto qwhat;
+
+    //                1234567890123456789
+    writeOnLCD(NULL, "READ from SD", (const char*)filename);
+
+    // remove the file if it exists
+    if( SD.exists( (char *)filename )) {
+      fp = SD.open( (const char *)filename, FILE_READ );
+      while( fp.available() > 0 ) {
+        outchar( fp.read() );
+      }
+      fp.close();
     }
     goto run_next_statement;
  #else
