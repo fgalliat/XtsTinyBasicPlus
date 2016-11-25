@@ -15,6 +15,12 @@ a fork of TinyBasic for Arduino by Xtase (fgalliat) @Nov 2016
 * It provides a regular BASIC shell, and can act as an HTTP Server to launch a 'web.bas' file
   that outputs directly in the browser.
 
+10 FOR I =1 TO 5
+20 PRINT "web ";: PRINT I
+30 NEXT I
+40 FILES
+50 PRINT "Free Mem:";: PRINT FREE()
+
 ![Web autorun script](/images/autorunWeb.jpg)
 
 * previous authors of TinyBasic :
