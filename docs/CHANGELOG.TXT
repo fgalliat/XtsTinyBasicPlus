@@ -6,13 +6,13 @@
 //      
 //      CHANGED BEHAVIOUR of FILES -> no more break the current PRGM (NOT a regular way for a BASIC !) 
 //      
-//      CINIT <bauds> -> init the alt. serialPort
-//      COUT   -> send a byte to alt. serialPort
-//      CLIST  -> list to alt. serialPort
-//      CPRINT -> print to init the alt. serialPort
-//      CINV   -> invert UART Vs SoftwareSerial (but no for CINIT)
-//      
-//      CINP -> TODO
+//      ADDED : CINIT <bauds> -> init the alt. serialPort
+//      ADDED : COUT   -> send a byte to alt. serialPort
+//      ADDED : CLIST  -> list to alt. serialPort
+//      ADDED : CPRINT -> print to init the alt. serialPort
+//      ADDED : CINV   -> invert UART Vs SoftwareSerial (but no for CINIT)
+//
+//      ADDED : CINP   -> waits a character from SLAVE serialPort
 //      
 //      
 //

@@ -808,6 +808,7 @@ const static unsigned char func_tab[] PROGMEM = {
   'R','N','D'+0x80,
 // Xtase extended functions -->
   'F','R','E','E'+0x80,
+  'C','I','N','P'+0x80,     // read a char from SLAVE serial
 // Xtase extended functions <--
   0
 };
@@ -816,8 +817,11 @@ const static unsigned char func_tab[] PROGMEM = {
 #define FUNC_AREAD   2
 #define FUNC_DREAD   3
 #define FUNC_RND     4
+
 #define FUNC_FREE    5
-#define FUNC_UNKNOWN 6
+#define FUNC_CINP    6
+
+#define FUNC_UNKNOWN 7
 
 const static unsigned char to_tab[] PROGMEM = {
   'T','O'+0x80,
@@ -1403,6 +1407,20 @@ static short int expr4(void)
 // Xtase extended fcts =======
     case FUNC_FREE:
       return getFreeMem();
+
+    case FUNC_CINP:
+      // wait a char from SLAVE
+      if ( serialInverted ) {
+        while(!Serial.available()) {;} 
+        #if ECHO_CHARS > 0
+          Serial.read();
+          while(!Serial.available()) {;} 
+        #endif        
+        return Serial.read();
+      } else {
+        while(!altSerial.available()) {;} 
+        return altSerial.read();
+      }
 // Xtase extended fcts =======
 
 
@@ -2397,6 +2415,8 @@ ioInit: // INIT 8000 => as INIT, "COM:", 8000, "B"
 
 ioInvert: 
   serialInverted = !serialInverted;
+  if ( serialInverted ) { writeOnLCD(NULL,"Master is now", "  ALTSerial"); }
+  else                  { writeOnLCD(NULL,"Master is now", "     USB"); }
   goto run_next_statement;
 
 ioOut: // OUT 100 => as OUT #1,100

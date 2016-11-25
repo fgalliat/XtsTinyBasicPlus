@@ -2,7 +2,7 @@
 
 a fork of TinyBasic for Arduino by Xtase (fgalliat) @Nov 2016
 
-It actually uses 40KB of flash & 7K of RAM (statically allocated)
+It actually uses 40KB of flash & 7K of RAM (statically allocated)<br/>
 so It **WILL NOT run on Arduino INO boards** ...
 
 (It's an early stage work, so it's dirty & not well documented)
@@ -29,7 +29,7 @@ so It **WILL NOT run on Arduino INO boards** ...
 ![Web autorun script](/images/autorunWeb.jpg)
 
 * It also have 2 serial ports (MASTER / SLAVE) that can be hot-swapped with 'CINV' command.<br/>
-  note that CINIT <baud_rate> does ONLY set the "Software" Serial port & that the "Hardware" Serial port (USB),<br/>
+  note that 'CINIT' <baud_rate> does ONLY set the "Software" Serial port & that the "Hardware" Serial port (USB),<br/>
   is always @ 115200 bauds (you can change it in the code).<br/>
 
 ![Web + 2 serial ports control](/images/Web_2Serials.jpg)
