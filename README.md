@@ -13,7 +13,7 @@ a fork of TinyBasic for Arduino by Xtase (fgalliat) @Nov 2016
 ![Dev Board](/images/devBoard.jpg)
 
 * It provides a regular BASIC shell, and can act as an HTTP Server to launch a 'web.bas' file
-  that ouputs in the browser.
+  that outputs directly in the browser.
 
 ![Web autorun script](/images/autorunWeb.jpg)
 
