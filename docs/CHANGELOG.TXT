@@ -1,4 +1,13 @@
-// va.15: 2016-11 Xtase (fgalliat) fork
+// va.15: 2016-11-26
+//      ADDED : BTN() func that returns 3-user-btns state if supported (else -1)
+//                    1 for UP / 2 for DOWN / 4 for OK
+//
+//              LCCLS                 erase the LCD if defined
+//              LCPRINT <line>,<expr> write on LCD @line (1 to 4) if defined
+//
+//              so now, You're able to create simple menus !!
+//
+// va.15: 2016-11-25 Xtase (fgalliat) fork
 //      ADDED : free() function + way to have no-arg function
 //      ADDED : WRESET to reset the ESP8266
 //      ADDED : DELETE "<file>" to remove filr from sdcard

@@ -8,13 +8,16 @@ so It **WILL NOT run on Arduino INO boards** ...
 (It's an early stage work, so it's dirty & not well documented)
 
 * added support for :
-   - ssd1306 LCD I2C Screen
+   - ssd1306 LCD I2C Screen + 3 user btns (up/down/ok) **[new]**
    - SPI uSD Card reader
    - ESP8266 Wifi module
    - 2nd UART (two serial ports control)
    - Teensy ++2 module
 
 ![Dev Board](/images/devBoard.jpg)
+
+* With it's 3 new user buttons & LCD control routines ( BTN() + LCCLS, LCPRINT <line>,<expr> ),<br/>
+  You are now able to create simple menus !!
 
 * It provides a regular BASIC shell, and can act as an HTTP Server to launch a 'web.bas' file<br/>
   that outputs directly in the browser.

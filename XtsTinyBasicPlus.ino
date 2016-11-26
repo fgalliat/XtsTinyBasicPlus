@@ -14,6 +14,32 @@
 // Teensy ++2 mode
 #define teen2 1
 
+// ===== buttons support =====
+// UP   0x01
+// DOWN 0x02
+// OK   0x04
+#define USER_BTNS_SUPPORT 1
+
+#ifdef USER_BTNS_SUPPORT
+ #define BTN_UP 0x01
+ #define BTN_DOWN 0x02
+ #define BTN_OK 0x04
+
+ // on a teensy ++2.0 (C5 - C7)
+ #define BTN_PIN_DOWN 15
+ #define BTN_PIN_UP   16
+ #define BTN_PIN_OK   17
+
+ int getBtnPressed() {
+    // pull-up mode
+   int up = ( digitalRead( BTN_PIN_UP   ) == LOW ) ? BTN_UP   : 0x00;
+   int dn = ( digitalRead( BTN_PIN_DOWN ) == LOW ) ? BTN_DOWN : 0x00;
+   int ok = ( digitalRead( BTN_PIN_OK   ) == LOW ) ? BTN_OK   : 0x00;
+   return up | dn | ok;
+ }
+ 
+#endif
+
 // ===== String for http page serving (for ex.) ====
 // redirects output to String buffer
 bool bufferedOutput = false;
@@ -100,6 +126,22 @@ int getFreeMem() {
     if ( str2 != NULL ) {
       display.println(str2);  
     }
+    display.display();
+  }
+
+  // =========================
+
+  void lcd_cls() {
+    display.clearDisplay();
+    display.setCursor(0,0);
+    display.display();
+  }
+
+  /** lineNum = 1 to 4 */
+  void lcd_print(short lineNum, short col, char* str) {
+    
+    display.setCursor( (6*(col-1)),( (lineNum-1) * 8) );
+    display.println(str);
     display.display();
   }
 
@@ -234,8 +276,9 @@ void waitFoClientConn(bool verbose = true) {
 
 const char* header =  "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: close\r\n"; 
 
-#define contentSize 1024
-char content[contentSize]; // the web page content
+//#define webContentSize 1024
+#define webContentSize 512
+char content[webContentSize]; // the web page content
 
 void openWebServerAndWait(bool defScr,bool defSer) {
   // web server mode
@@ -251,7 +294,7 @@ void openWebServerAndWait(bool defScr,bool defSer) {
     writeOnLCD(" -= ESP 8266 page =- ", "Preparing page");
     Serial.println("Preparing page");
 
-    for(int i=0; i < contentSize; i++) { content[i] = 0x00; }
+    for(int i=0; i < webContentSize; i++) { content[i] = 0x00; }
     
     
     strcat( content, "<html><head><title>ESP8266 uXtsBasic</title></head>\n");
@@ -291,7 +334,9 @@ void openWebServerAndWait(bool defScr,bool defSer) {
     strcat( content, b );
 
     strcat( content, "</pre>\n");
-    strcat( content, "</td></tr></table>\n");
+    strcat( content, "</td></tr></table>\n"); 
+    // @ this time content is only 306 bytes long
+   
     // ==========================================
 
     const char* openCode = "<hr/><pre>";
@@ -411,7 +456,7 @@ bool serialInverted = false;
 #ifdef ALT_SER_PORT
   // ADDED :
   //   KW_INIT, KW_INP, KW_OUT,
-  //   KW_LLIST, KW_LPRINT,
+  //   KW_LLIST, KW_CPRINT,
 
   //#define ALT_SER_PORT_X07_MODE 1
   //#undef ALT_SER_PORT_X07_MODE
@@ -568,7 +613,7 @@ File fp;
 #endif
 
 #if defined(WIFI_SUPPORT)
-  #define kRamWIFI (WIFI_BUFF_SIZE + 1024 + 1024 + 512)
+  #define kRamWIFI (WIFI_BUFF_SIZE + 1024 + webContentSize + 512)
 #else
   #define kRamWIFI (0)
 #endif
@@ -730,6 +775,12 @@ const static unsigned char keywords[] PROGMEM = {
   'W','R','E','S','E','T'+0x80, // reset the 8266
 #endif
 
+// Xtase LCD routines
+#ifdef LCD_SUPPORT
+  'L','C','C','L','S'+0x80,
+  'L','C','P','R','I','N','T'+0x80, // reset the 8266
+#endif
+
 
 // Xtase extended functions
   'D','E','L','E','T','E'+0x80,
@@ -769,13 +820,18 @@ enum {
 
 #ifdef ALT_SER_FILE
   KW_INIT, KW_OUT,
-  KW_LLIST, KW_LPRINT,
+  KW_LLIST, KW_CPRINT,
   KW_CINV,
 #endif
 
 #ifdef WIFI_SUPPORT
   KW_WTEST, 
   KW_WRESET,
+#endif
+
+#ifdef LCD_SUPPORT
+  KW_LCCLS, 
+  KW_LCPRINT,
 #endif
 
 // Xtase extended functions
@@ -808,7 +864,9 @@ const static unsigned char func_tab[] PROGMEM = {
   'R','N','D'+0x80,
 // Xtase extended functions -->
   'F','R','E','E'+0x80,
+  // function need to be defined even if not supported because those are indexed manually !!!
   'C','I','N','P'+0x80,     // read a char from SLAVE serial
+  'B','T','N'+0x80,         // retuens the state of userBtns if defined
 // Xtase extended functions <--
   0
 };
@@ -820,8 +878,9 @@ const static unsigned char func_tab[] PROGMEM = {
 
 #define FUNC_FREE    5
 #define FUNC_CINP    6
+#define FUNC_BTN     7
 
-#define FUNC_UNKNOWN 7
+#define FUNC_UNKNOWN 8
 
 const static unsigned char to_tab[] PROGMEM = {
   'T','O'+0x80,
@@ -1021,8 +1080,7 @@ static unsigned char popb()
 }
 
 /***************************************************************************/
-void printnum(int num)
-{
+void printnum(int num) {
   int digits = 0;
 
   if(num < 0)
@@ -1110,6 +1168,74 @@ static unsigned char print_quoted_string(void)
 
   return 1;
 }
+
+// Xts Xts Xts Xts Xts Xts Xts Xts Xts Xts 
+
+#ifdef LCD_SUPPORT
+ static void lcd_line_terminator(short lineNum) {}
+ 
+ void lcd_printnum(short lineNum, int num) {
+  int digits = 0;
+  char* numStr = (char*)malloc(10);
+  memset(numStr, 0x00, 10);
+  int numStrCursor = 0;
+  
+  if(num < 0) {
+    num = -num;
+    l_outchar('-');
+  }
+  do {
+    pushb(num%10+'0');
+    num = num/10;
+    digits++;
+  } while (num > 0);
+
+  while(digits > 0) {
+    //l_outchar(popb());
+    numStr[numStrCursor++] = popb();
+    digits--;
+  }
+  // TODO : BEWARE : not X=1, else will erase line
+  lcd_print(lineNum, 1, numStr);
+  free(numStr);
+  numStr = NULL;
+ }
+
+static unsigned char lcd_print_quoted_string(short lineNum) {
+  int i=0;
+  unsigned char delim = *txtpos;
+
+  if(delim != '"' && delim != '\'') return 0;
+  
+  txtpos++;
+
+  // Check we have a closing delimiter
+  while(txtpos[i] != delim) {
+    if(txtpos[i] == NL)
+      return 0;
+    i++;
+  }
+
+  char* charStr = (char*)malloc(20);
+  memset(charStr, 0x00, 20);
+  int charStrCursor = 0;
+
+  // Print the characters
+  while(*txtpos != delim) {
+    //l_outchar(*txtpos);
+    charStr[charStrCursor++] = *txtpos;
+    txtpos++;
+  }
+  txtpos++; // Skip over the last delimiter
+
+  // TODO : not mandatory X=1, could erase line....
+  lcd_print(lineNum, 1, charStr);
+  free(charStr);
+  charStr = NULL;
+
+  return 1;
+ }
+#endif
 
 // Xts Xts Xts Xts Xts Xts Xts Xts Xts Xts 
 static void lline_terminator(void)
@@ -1421,6 +1547,14 @@ static short int expr4(void)
         while(!altSerial.available()) {;} 
         return altSerial.read();
       }
+
+    case FUNC_BTN:
+      // return user btn state if defined
+      #ifdef USER_BTNS_SUPPORT
+        return getBtnPressed();
+      #else
+        return -1;
+      #endif
 // Xtase extended fcts =======
 
 
@@ -1905,7 +2039,7 @@ interperateAtTxtpos:
     goto ioOut;
   case KW_LLIST:
     goto ioList;
-  case KW_LPRINT:
+  case KW_CPRINT:
     goto ioPrint;
   case KW_CINV: // invert serials Hard Vs Soft
     goto ioInvert; 
@@ -1916,6 +2050,13 @@ interperateAtTxtpos:
     goto wifiTest;
   case KW_WRESET:
     goto wifiReset;
+#endif
+
+#ifdef LCD_SUPPORT
+  case KW_LCCLS:
+    goto lcdCls;
+  case KW_LCPRINT:
+    goto lcdPrint;
 #endif
 
 // XTase extended functions
@@ -2646,6 +2787,72 @@ wifiReset:
   goto unimplemented;
 #endif
 
+/*************************************************/
+
+lcdCls:
+ #ifdef LCD_SUPPORT
+    lcd_cls();
+  goto run_next_statement;
+ #else
+  goto unimplemented;
+ #endif
+
+lcdPrint: // LCPRINT <num>,<expr>
+ #ifdef LCD_SUPPORT
+    // Get the line to locate to
+    short lineNum;
+    expression_error = 0;
+    lineNum = expression();
+    if(expression_error) goto qwhat;
+    // -------------------------
+    
+    if(*txtpos == ',' ) {
+      txtpos++;
+    } else goto qwhat;
+    
+    // -------------------------
+
+  // If we have an empty list then just put out a NL
+  if(*txtpos == ':' ) {
+    lcd_line_terminator(lineNum);
+    txtpos++;
+    goto run_next_statement;
+  }
+  if(*txtpos == NL) {
+    goto execnextline;
+  }
+
+  while(1) {
+    ignore_blanks();
+    if(lcd_print_quoted_string(lineNum)) { ; }
+    else if(*txtpos == '"' || *txtpos == '\'') goto qwhat;
+    else {
+      short int e;
+      expression_error = 0;
+      e = expression();
+      if(expression_error) goto qwhat;
+      lcd_printnum(lineNum, e);
+    }
+
+    // At this point we have three options, a comma or a new line
+    if(*txtpos == ',')
+      txtpos++; // Skip the comma and move onto the next
+    else if(txtpos[0] == ';' && (txtpos[1] == NL || txtpos[1] == ':')) {
+      txtpos++; // This has to be the end of the print - no newline
+      break;
+    }
+    else if(*txtpos == NL || *txtpos == ':') {
+      lcd_line_terminator(lineNum);  // The end of the print statement
+      break;
+    }
+    else
+      goto qwhat; 
+  }
+  goto run_next_statement;
+ #else
+  goto unimplemented;
+ #endif
+
 
 /*************************************************/
 
@@ -2795,6 +3002,13 @@ static void line_terminator(void)
 
 
 void setup() {
+
+#ifdef USER_BTNS_SUPPORT
+  pinMode( BTN_PIN_UP,   INPUT_PULLUP );
+  pinMode( BTN_PIN_DOWN, INPUT_PULLUP );
+  pinMode( BTN_PIN_OK,   INPUT_PULLUP );
+#endif
+
 
 #ifdef WIFI_SUPPORT
   //outputBuffer = (char*)malloc( OUT_BUFF_LEN );
