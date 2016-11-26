@@ -16,7 +16,7 @@ so It **WILL NOT run on Arduino INO boards** ...
 
 ![Dev Board](/images/devBoard.jpg)
 
-* With it's 3 new user buttons & LCD control routines ( BTN() + LCCLS, LCPRINT <line>,<expr> ),<br/>
+* With it's 3 new user buttons & LCD control routines ( BTN() + LCCLS, LCPRINT &lt;line&gt;,&lt;expr&gt; ),<br/>
   You are now able to create simple menus !!
 
 * It provides a regular BASIC shell, and can act as an HTTP Server to launch a 'web.bas' file<br/>
