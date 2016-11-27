@@ -19,6 +19,9 @@ so It **WILL NOT run on Arduino INO boards** ...
 * With it's 3 new user buttons & LCD control routines ( BTN() + LCCLS, LCPRINT &lt;line&gt;,&lt;expr&gt; ),<br/>
   You are now able to create simple menus !!
 
+* Newly created mainboard & started to build enclosure...
+![Dev Board](/images/enclosure_plus_photo.jpg)
+
 * It provides a regular BASIC shell, and can act as an HTTP Server to launch a 'web.bas' file<br/>
   that outputs directly in the browser.
 
