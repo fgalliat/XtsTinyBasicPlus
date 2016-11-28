@@ -460,6 +460,7 @@ bool serialInverted = false;
 
   //#define ALT_SER_PORT_X07_MODE 1
   //#undef ALT_SER_PORT_X07_MODE
+
   
   #include "CustomSoftwareSerial_xtase.h"
   #ifdef ALT_SER_PORT_X07_MODE
@@ -785,6 +786,7 @@ const static unsigned char keywords[] PROGMEM = {
 // Xtase extended functions
   'D','E','L','E','T','E'+0x80,
   'C','A','T'+0x80,
+  'W','R','I','T','E'+0x80,
   
   0
 };
@@ -837,6 +839,7 @@ enum {
 // Xtase extended functions
   KW_DELETE,
   KW_CAT,
+  KW_WRITE,
 
   KW_DEFAULT /* always the final one*/
 };
@@ -1236,6 +1239,42 @@ static unsigned char lcd_print_quoted_string(short lineNum) {
   return 1;
  }
 #endif
+
+// Xts Xts Xts Xts Xts Xts Xts Xts Xts Xts 
+
+// can read up to 50 bytes
+char* get_quoted_string() {
+  int i=0;
+  unsigned char delim = *txtpos;
+
+  if(delim != '"' && delim != '\'') return NULL;
+  
+  txtpos++;
+
+  // Check we have a closing delimiter
+  while(txtpos[i] != delim) {
+    if(txtpos[i] == NL)
+      return NULL;
+    i++;
+  }
+
+  char* charStr = (char*)malloc(50);
+  memset(charStr, 0x00, 50);
+  int charStrCursor = 0;
+
+  // Print the characters
+  while(*txtpos != delim) {
+    //l_outchar(*txtpos);
+    charStr[charStrCursor++] = *txtpos;
+    txtpos++;
+  }
+  txtpos++; // Skip over the last delimiter
+
+  // TODO : don't forget to free after
+  return charStr;
+ }
+
+
 
 // Xts Xts Xts Xts Xts Xts Xts Xts Xts Xts 
 static void lline_terminator(void)
@@ -1688,7 +1727,7 @@ static short int expression(void)
   unsigned char *newEnd;
 
 void loop() {
-  
+
 #ifdef ARDUINO
  #ifdef ENABLE_TONES
   noTone( kPiezoPin );
@@ -1719,6 +1758,9 @@ void loop() {
 // really do the job
 //int cmdReq = -1;
 void doRun(int cmd, const char* arg) {
+  unsigned char *str;
+  int len;
+  
   unsigned char linelen;
   boolean isDigital;
   boolean alsoWait = false;
@@ -2064,6 +2106,9 @@ interperateAtTxtpos:
     goto sdDelete;
   case KW_CAT:
     goto sdCat;
+  case KW_WRITE:
+    goto sdWrite;
+// XTase extended functions
 
   case KW_DEFAULT:
     goto assignment;
@@ -2856,9 +2901,65 @@ lcdPrint: // LCPRINT <num>,<expr>
 
 /*************************************************/
 
+
+sdWrite:
+ #ifdef ENABLE_FILEIO
+    // appends text to text file
+ 
+    unsigned char *filename;
+    // Work out the filename
+    expression_error = 0;
+    filename = filenameWord();
+    if(expression_error) goto qwhat;
+
+    //                1234567890123456789
+    writeOnLCD(NULL, "WRITE to SD", (const char*)filename);
+
+    // Cf end of filenameWord()
+    if ( *txtpos == '\0' ) {
+      txtpos++;
+    }
+
+    // TODO : look for whiteSpaces
+    if(*txtpos == ',') txtpos++;
+    else {
+//      Serial.print("Could not read comma : ");
+//      Serial.print( (int)txtpos );
+//      Serial.print(" : ");
+//      Serial.println( (int)(*txtpos) );
+      goto qwhat;
+    }
+
+    // TODO : look for whiteSpaces
+    str = (unsigned char*)get_quoted_string();
+
+    if ( str == NULL ) Serial.println("Could not read quoted string");
+    if ( str == NULL ) goto qwhat;
+
+    len = strlen( (const char*)str );
+    for(int i=0; i < len; i++) {
+      // dirty : because it changes the '\n' by '\r\n' => but no char moves...
+      if ( str[i] == '\\' && i < len-1 && str[i+1] == 'n' ) { str[i] = 0x0D; str[i+1] = 0x0A; }
+    }
+
+    fp = SD.open( (const char*)filename, FILE_WRITE );
+    fp.print( (const char*)str );
+    fp.close();
+
+    free( str );
+
+    goto run_next_statement;
+ #else
+  goto unimplemented;
+ #endif
+
+
+
+
 sdDelete:
  #ifdef ENABLE_FILEIO
-    unsigned char *filename;
+    //unsigned char *filename;
+    
     // Work out the filename
     expression_error = 0;
     filename = filenameWord();
@@ -2962,7 +3063,7 @@ static int isValidFnChar( char c )
   return 0;
 }
 
-unsigned char * filenameWord(void)
+unsigned char * filenameWord()
 {
   // SDL - I wasn't sure if this functionality existed above, so I figured i'd put it here
   unsigned char * ret = txtpos;
@@ -3002,6 +3103,10 @@ static void line_terminator(void)
 
 
 void setup() {
+
+  // the FUTUR X07 mode pin
+  pinMode( 14, INPUT_PULLUP );
+
 
 #ifdef USER_BTNS_SUPPORT
   pinMode( BTN_PIN_UP,   INPUT_PULLUP );

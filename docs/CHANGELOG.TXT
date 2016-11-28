@@ -1,3 +1,8 @@
+// va.15: 2016-11-28
+//      ADDED : WRITE "<file>","<quoted_string\nable>" : appends "quoted_string" to "file"
+//              N.B.: can DELETE <file> before
+//              N.B.: Oups : TinyBasic doesn't support char variables ....
+//
 // va.15: 2016-11-26
 //      ADDED : BTN() func that returns 3-user-btns state if supported (else -1)
 //                    1 for UP / 2 for DOWN / 4 for OK
