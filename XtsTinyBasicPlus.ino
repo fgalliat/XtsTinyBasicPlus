@@ -8,16 +8,22 @@
 //      Scott Lawrence <yorgle@gmail.com>
 //         Brian O'Dell <megamemnon@megamemnon.com>
 
+// ============================================================
 // IF testing with Visual C, this needs to be the first thing in the file.
 //#include "stdafx.h"
 
-// Teensy ++2 mode
+// hack to let makefiles work with this file unchanged
+#ifdef FORCE_DESKTOP 
+ #undef ARDUINO
+#else
+ //#define ARDUINO 1
+#endif
+// ============================================================
+
+// Teensy ++2.0 mode
 #define teen2 1
 
 // ===== buttons support =====
-// UP   0x01
-// DOWN 0x02
-// OK   0x04
 #define USER_BTNS_SUPPORT 1
 
 #ifdef USER_BTNS_SUPPORT
@@ -31,7 +37,7 @@
  #define BTN_PIN_OK   17
 
  int getBtnPressed() {
-    // pull-up mode
+    // pull-up default mode
    int up = ( digitalRead( BTN_PIN_UP   ) == LOW ) ? BTN_UP   : 0x00;
    int dn = ( digitalRead( BTN_PIN_DOWN ) == LOW ) ? BTN_DOWN : 0x00;
    int ok = ( digitalRead( BTN_PIN_OK   ) == LOW ) ? BTN_OK   : 0x00;
@@ -43,15 +49,12 @@
 // ===== String for http page serving (for ex.) ====
 // redirects output to String buffer
 bool bufferedOutput = false;
-//String outputBuffer;
 
 #define OUT_BUFF_LEN 1024
-//char* outputBuffer = NULL;
 char outputBuffer[OUT_BUFF_LEN];
 int outputBufferCursor = 0;
 
 void cleanOutBuff() { 
-  //memset(&outputBuffer, 0, OUT_BUFF_LEN); 
   for(int i=0; i < OUT_BUFF_LEN; i++) { outputBuffer[i]=0x00; }
   outputBufferCursor = 0; 
 }
@@ -175,10 +178,10 @@ int getFreeMem() {
 // ******************************************************
 
 bool WIFI_OK = false;
+
 #if defined(WIFI_SUPPORT)
   #define WIFI_BUFF_SIZE 128
   char wifiBuff[WIFI_BUFF_SIZE];
-
   void emptyWifiBuff() { for(int i=0; i < WIFI_BUFF_SIZE; i++) { wifiBuff[i] = 0x00; } }
     
   #if defined(teen2)  
@@ -483,6 +486,14 @@ bool serialInverted = false;
    #endif
   #endif
 
+  void invertSerialPorts() {
+    serialInverted = !serialInverted;
+    if ( serialInverted ) { writeOnLCD(NULL,"Master is now", "  ALTSerial"); }
+    else                  { writeOnLCD(NULL,"Master is now", "     USB"); }
+  }
+
+
+
 #endif
 
 
@@ -494,28 +505,9 @@ bool serialInverted = false;
 // that was a memory lack issue
 #define XTS_CONSOLE_SPEED 9600
 
-// This enables LOAD, SAVE, FILES commands through the Arduino SD Library
-// it adds 9k of usage as well.
-// NOT ENOUGH RAM on UNO
-//#define ENABLE_FILEIO 1
-
-
-
-
-
-
-
-
 
 
 char eliminateCompileErrors = 1;  // fix to suppress arduino build errors
-
-// hack to let makefiles work with this file unchanged
-#ifdef FORCE_DESKTOP 
-#undef ARDUINO
-#else
-#define ARDUINO 1
-#endif
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -560,46 +552,43 @@ char eliminateCompileErrors = 1;  // fix to suppress arduino build errors
 
 ////////////////////////////////////////////////////////////////////////////////
 #ifdef ARDUINO
-#ifndef RAMEND
-// okay, this is a hack for now
-// if we're in here, we're a DUE probably (ARM instead of AVR)
-
-#define RAMEND 4096-1
-
-// turn off EEProm
-#undef ENABLE_EEPROM
-#undef ENABLE_TONES
-
+  #ifndef RAMEND
+  // okay, this is a hack for now
+  // if we're in here, we're a DUE probably (ARM instead of AVR)
+  #define RAMEND 4096-1
+ 
+  // turn off EEProm
+  #undef ENABLE_EEPROM
+  #undef ENABLE_TONES
 #else
-// we're an AVR!
-
-// we're moving our data strings into progmem
-#include <avr/pgmspace.h>
+  // we're an AVR!
+  // we're moving our data strings into progmem
+  #include <avr/pgmspace.h>
 #endif
 
 // includes, and settings for Arduino-specific functionality
 #ifdef ENABLE_EEPROM
-#include <EEPROM.h>  /* NOTE: case sensitive */
-int eepos = 0;
+ #include <EEPROM.h>  /* NOTE: case sensitive */
+ int eepos = 0;
 #endif
 
 
 #ifdef ENABLE_FILEIO
-#include <SD.h>
-#include <SPI.h> /* needed as of 1.5 beta */
+ #include <SD.h>
+ #include <SPI.h> /* needed as of 1.5 beta */
 
-// Arduino-specific configuration
-// set this to the card select for your SD shield
-#define kSD_CS XTS_SD_CS_PIN
+ // Arduino-specific configuration
+ // set this to the card select for your SD shield
+ #define kSD_CS XTS_SD_CS_PIN
 
-#define kSD_Fail  0
-#define kSD_OK    1
+ #define kSD_Fail  0
+ #define kSD_OK    1
 
-// FOR AUTORUN / CHAIN / LOAD / SAVE commands
-File fp;
-// FOR FILES / CAT / WRITE commands
-File fpSdFiles;
+ // FOR AUTORUN / CHAIN / LOAD / SAVE commands
+ File fp;
 
+ // FOR CAT / WRITE commands (FILES has its own pointer)
+ File fpSdFiles;
 
 #endif
 
@@ -631,11 +620,9 @@ File fpSdFiles;
   #define kRamWIFI (0)
 #endif
 
-// Cf issue #18
-//#define kRamSize  (RAMEND - 1160 - kRamFileIO - kRamTones) 
 
 // Xts Xts Xts Xts Xts Xts Xts Xts Xts Xts Xts Xts 
-// the ONLY String variable of the TinyBasic
+// the EXPERIMENTAL String variables in this impl of TinyBasic
 
 // str var len
 #define STR_VAR_LEN 50
@@ -646,30 +633,35 @@ char strVar[STR_VAR_NB][STR_VAR_LEN];
 // vNum : 0 - 4
 void cleanStrVar(int vNum) { for(int i=0; i < STR_VAR_LEN; i++) { strVar[vNum][i] = 0x00; } }
 char* getStrVar(int vNum) { return strVar[vNum]; }
-
-//char strVar[STR_VAR_LEN];
-//void cleanStrVar() { for(int i=0; i < STR_VAR_LEN; i++) { strVar[i] = 0x00; } }
 // Xts Xts Xts Xts Xts Xts Xts Xts Xts Xts Xts Xts 
 
+// Cf issue #18
+//#define kRamSize  (RAMEND - 1160 - kRamFileIO - kRamTones) 
 #define kRamSize  (RAMEND - 1200 - (STR_VAR_LEN * STR_VAR_NB) - kRamFileIO - kRamTones - kRamLCD - kRamWIFI) 
 
-
+// for PC Setup (not sure that it still work....)
 #ifndef ARDUINO
  // Not arduino setup
  #include <stdio.h>
  #include <stdlib.h>
  #undef ENABLE_TONES
  // size of our program ram
- // XTS FIX on a AT328 MEM is 2K & only 1K free
  #define kRamSize   4096 /* arbitrary */
  #ifdef ENABLE_FILEIO
   FILE * fp;
  #endif
 #endif
+// for PC Setup (not sure that it still work....)
+
+#ifdef ARDUINO
+ #define ECHO_CHARS 1
+#else
+ #define ECHO_CHARS 0
+#endif
+
 
 #ifdef ENABLE_FILEIO
-// functions defined elsehwere
-void cmd_Files( void );
+  void cmd_Files( void );
 #endif
 
 ////////////////////
@@ -682,7 +674,7 @@ void cmd_Files( void );
 #endif
 
 #ifndef byte
-typedef unsigned char byte;
+  typedef unsigned char byte;
 #endif
 
 // some catches for AVR based text string stuff...
@@ -730,17 +722,12 @@ static unsigned char outStream = kStreamSerial;
 #define CTRLX 0x18
 // Xts
 #define HASH '#'
+#define DOLLAR '$'
 
 typedef short unsigned LINENUM;
-#ifdef ARDUINO
- #define ECHO_CHARS 1
-#else
- #define ECHO_CHARS 0
-#endif
-
 
 static unsigned char program[kRamSize];
-static const char *  sentinel = "HELLO";
+//static const char *  sentinel = "HELLO";
 static unsigned char *txtpos,*list_line, *tmptxtpos;
 static unsigned char expression_error;
 static unsigned char *tempsp;
@@ -975,8 +962,6 @@ static unsigned char *program_start;
 //static unsigned char *program_end;
 //static unsigned char *variables_begin;
 
-static unsigned char *stack; // Software stack for things that should go on the CPU stack
-
 static unsigned char *current_line;
 static unsigned char *sp;
 #define STACK_GOSUB_FLAG 'G'
@@ -990,22 +975,6 @@ static const unsigned char howmsg[]           PROGMEM = "How?";
 static const unsigned char sorrymsg[]         PROGMEM = "Sorry!";
 //static const unsigned char initmsg[]          PROGMEM = "TinyBasic Plus " kVersion;
 
-//  #if defined(teen2)
-//    static const unsigned char cpuMsg[]          PROGMEM = "on a Teensy ++2 MCU";
-//  #elif defined(__AVR_ATmega32U4__)
-//    static const unsigned char cpuMsg[]          PROGMEM = "on a 32u4 MCU";
-//  #elif defined(__AVR_ATmega328P__)
-//    static const unsigned char cpuMsg[]          PROGMEM = "on a 328P MCU";
-//  #else  
-//    static const unsigned char cpuMsg[]          PROGMEM = "on a ??? MCU";
-//  #endif
-//
-//  #if defined (ENABLE_FILEIO)
-//    static const unsigned char ioMsg[]          PROGMEM = "SDIO enabled";
-//  #else  
-//    static const unsigned char ioMsg[]          PROGMEM = "SDIO disabled";
-//  #endif
-  
 static const unsigned char memorymsg[]        PROGMEM = " bytes free.";
 #ifdef ARDUINO
  #ifdef ENABLE_EEPROM
@@ -1059,10 +1028,9 @@ static void line_terminator(void);
 static short int expression(void);
 static unsigned char breakcheck(void);
 /***************************************************************************/
-static void ignore_blanks(void)
-{
-  while(*txtpos == SPACE || *txtpos == TAB)
-    txtpos++;
+
+static void ignore_blanks(void) {
+  while(*txtpos == SPACE || *txtpos == TAB) { txtpos++; }
 }
 
 
@@ -1071,23 +1039,19 @@ static void scantable(const unsigned char *table)
 {
   int i = 0;
   table_index = 0;
-  while(1)
-  {
+  while(1) {
     // Run out of table entries?
     if(pgm_read_byte( table ) == 0)
       return;
 
     // Do we match this character?
-    if(txtpos[i] == pgm_read_byte( table ))
-    {
+    if(txtpos[i] == pgm_read_byte( table )) {
       i++;
       table++;
     }
-    else
-    {
+    else {
       // do we match the last character of keywork (with 0x80 added)? If so, return
-      if(txtpos[i]+0x80 == pgm_read_byte( table ))
-      {
+      if(txtpos[i]+0x80 == pgm_read_byte( table )) {
         txtpos += i+1;  // Advance the pointer to following the keyword
         ignore_blanks();
         return;
@@ -1107,15 +1071,13 @@ static void scantable(const unsigned char *table)
 }
 
 /***************************************************************************/
-static void pushb(unsigned char b)
-{
+static void pushb(unsigned char b) {
   sp--;
   *sp = b;
 }
 
 /***************************************************************************/
-static unsigned char popb()
-{
+static unsigned char popb() {
   unsigned char b;
   b = *sp;
   sp++;
@@ -1126,8 +1088,7 @@ static unsigned char popb()
 void printnum(int num) {
   int digits = 0;
 
-  if(num < 0)
-  {
+  if(num < 0) {
     num = -num;
     outchar('-');
   }
@@ -1135,18 +1096,15 @@ void printnum(int num) {
     pushb(num%10+'0');
     num = num/10;
     digits++;
-  }
-  while (num > 0);
+  } while (num > 0);
 
-  while(digits > 0)
-  {
+  while(digits > 0) {
     outchar(popb());
     digits--;
   }
 }
 
-void printUnum(unsigned int num)
-{
+void printUnum(unsigned int num) {
   int digits = 0;
 
   do {
@@ -1156,24 +1114,20 @@ void printUnum(unsigned int num)
   }
   while (num > 0);
 
-  while(digits > 0)
-  {
+  while(digits > 0) {
     outchar(popb());
     digits--;
   }
 }
 
 /***************************************************************************/
-static unsigned short testnum(void)
-{
+static unsigned short testnum(void) {
   unsigned short num = 0;
   ignore_blanks();
 
-  while(*txtpos>= '0' && *txtpos <= '9' )
-  {
+  while(*txtpos>= '0' && *txtpos <= '9' ) {
     // Trap overflows
-    if(num >= 0xFFFF/10)
-    {
+    if(num >= 0xFFFF/10) {
       num = 0xFFFF;
       break;
     }
@@ -1181,12 +1135,11 @@ static unsigned short testnum(void)
     num = num *10 + *txtpos - '0';
     txtpos++;
   }
-  return  num;
+  return num;
 }
 
 /***************************************************************************/
-static unsigned char print_quoted_string(void)
-{
+static unsigned char print_quoted_string(void) {
   int i=0;
   unsigned char delim = *txtpos;
   if(delim != '"' && delim != '\'')
@@ -1194,16 +1147,14 @@ static unsigned char print_quoted_string(void)
   txtpos++;
 
   // Check we have a closing delimiter
-  while(txtpos[i] != delim)
-  {
+  while(txtpos[i] != delim) {
     if(txtpos[i] == NL)
       return 0;
     i++;
   }
 
   // Print the characters
-  while(*txtpos != delim)
-  {
+  while(*txtpos != delim) {
     outchar(*txtpos);
     txtpos++;
   }
@@ -1238,7 +1189,7 @@ static unsigned char print_quoted_string(void)
     numStr[numStrCursor++] = popb();
     digits--;
   }
-  // TODO : BEWARE : not X=1, else will erase line
+  // TODO : BEWARE : not X=1, else will erase current line
   lcd_print(lineNum, 1, numStr);
   free(numStr);
   numStr = NULL;
@@ -1271,7 +1222,7 @@ static unsigned char lcd_print_quoted_string(short lineNum) {
   }
   txtpos++; // Skip over the last delimiter
 
-  // TODO : not mandatory X=1, could erase line....
+  // TODO : not mandatory X=1, could erase current line....
   lcd_print(lineNum, 1, charStr);
   free(charStr);
   charStr = NULL;
@@ -1327,7 +1278,7 @@ char* get_quoted_string(bool* needFreeAfter) {
   }
   txtpos++; // Skip over the last delimiter
 
-  // TODO : don't forget to free after
+  // don't forget to free after (if needFreeAfter == true)
   *needFreeAfter = true; 
   return charStr;
  }
@@ -1335,14 +1286,12 @@ char* get_quoted_string(bool* needFreeAfter) {
 
 
 // Xts Xts Xts Xts Xts Xts Xts Xts Xts Xts 
-static void lline_terminator(void)
-{
+static void lline_terminator(void) {
   l_outchar(NL);
   l_outchar(CR);
 }
 
-void lprintline()
-{
+void lprintline() {
   LINENUM line_num;
 
   line_num = *((LINENUM *)(list_line));
@@ -1351,8 +1300,7 @@ void lprintline()
   // Output the line */
   lprintnum(line_num);
   l_outchar(' ');
-  while(*list_line != NL)
-  {
+  while(*list_line != NL) {
     l_outchar(*list_line);
     list_line++;
   }
@@ -1360,12 +1308,10 @@ void lprintline()
   lline_terminator();
 }
 
-void lprintnum(int num)
-{
+void lprintnum(int num) {
   int digits = 0;
 
-  if(num < 0)
-  {
+  if(num < 0) {
     num = -num;
     l_outchar('-');
   }
@@ -1373,18 +1319,15 @@ void lprintnum(int num)
     pushb(num%10+'0');
     num = num/10;
     digits++;
-  }
-  while (num > 0);
+  } while (num > 0);
 
-  while(digits > 0)
-  {
+  while(digits > 0) {
     l_outchar(popb());
     digits--;
   }
 }
 
-static unsigned char lprint_quoted_string(void)
-{
+static unsigned char lprint_quoted_string(void) {
   int i=0;
   unsigned char delim = *txtpos;
   if(delim != '"' && delim != '\'')
@@ -1392,16 +1335,14 @@ static unsigned char lprint_quoted_string(void)
   txtpos++;
 
   // Check we have a closing delimiter
-  while(txtpos[i] != delim)
-  {
+  while(txtpos[i] != delim) {
     if(txtpos[i] == NL)
       return 0;
     i++;
   }
 
   // Print the characters
-  while(*txtpos != delim)
-  {
+  while(*txtpos != delim) {
     l_outchar(*txtpos);
     txtpos++;
   }
@@ -1416,42 +1357,32 @@ void printXts(const unsigned char *msg) {
   for(int i=0; i < len; i++) {
     outchar( msg[i] );
   }
-  //outchar( 13 );
-  //outchar( 10 );
-  //while( pgm_read_byte( msg ) != 0 ) {
-  //  outchar( pgm_read_byte( msg++ ) );
-  //};
 }
 
 // Xts Xts Xts Xts Xts Xts Xts Xts Xts Xts 
 
 
 /***************************************************************************/
-void printmsgNoNL(const unsigned char *msg)
-{
+void printmsgNoNL(const unsigned char *msg) {
   while( pgm_read_byte( msg ) != 0 ) {
     outchar( pgm_read_byte( msg++ ) );
   };
 }
 
 /***************************************************************************/
-void printmsg(const unsigned char *msg)
-{
+void printmsg(const unsigned char *msg) {
   printmsgNoNL(msg);
   line_terminator();
 }
 
 /***************************************************************************/
-static void getln(char prompt)
-{
+static void getln(char prompt) {
   outchar(prompt);
   txtpos = program_end+sizeof(LINENUM);
 
-  while(1)
-  {
+  while(1) {
     char c = inchar();
-    switch(c)
-    {
+    switch(c) {
     case NL:
       //break;
     case CR:
@@ -1470,8 +1401,7 @@ static void getln(char prompt)
       // We need to leave at least one space to allow us to shuffle the line into order
       if(txtpos == variables_begin-2)
         outchar(BELL);
-      else
-      {
+      else {
         txtpos[0] = c;
         txtpos++;
         outchar(c);
@@ -1481,11 +1411,9 @@ static void getln(char prompt)
 }
 
 /***************************************************************************/
-static unsigned char *findline(void)
-{
+static unsigned char *findline(void) {
   unsigned char *line = program_start;
-  while(1)
-  {
+  while(1) {
     if(line == program_end)
       return line;
 
@@ -1498,13 +1426,11 @@ static unsigned char *findline(void)
 }
 
 /***************************************************************************/
-static void toUppercaseBuffer(void)
-{
+static void toUppercaseBuffer(void) {
   unsigned char *c = program_end+sizeof(LINENUM);
   unsigned char quote = 0;
 
-  while(*c != NL)
-  {
+  while(*c != NL) {
     // Are we in a quoted string?
     if(*c == quote)
       quote = 0;
@@ -1517,8 +1443,7 @@ static void toUppercaseBuffer(void)
 }
 
 /***************************************************************************/
-void printline()
-{
+void printline() {
   LINENUM line_num;
 
   line_num = *((LINENUM *)(list_line));
@@ -1527,8 +1452,7 @@ void printline()
   // Output the line */
   printnum(line_num);
   outchar(' ');
-  while(*list_line != NL)
-  {
+  while(*list_line != NL) {
     outchar(*list_line);
     list_line++;
   }
@@ -1537,8 +1461,7 @@ void printline()
 }
 
 /***************************************************************************/
-static short int expr4(void)
-{
+static short int expr4(void) {
   // fix provided by Jurg Wullschleger wullschleger@gmail.com
   // fixes whitespace and unary operations
   ignore_blanks();
@@ -1549,20 +1472,17 @@ static short int expr4(void)
   }
   // end fix
 
-  if(*txtpos == '0')
-  {
+  if(*txtpos == '0') {
     txtpos++;
     return 0;
   }
 
-  if(*txtpos >= '1' && *txtpos <= '9')
-  {
+  if(*txtpos >= '1' && *txtpos <= '9') {
     short int a = 0;
-    do  {
+    do {
       a = a*10 + *txtpos - '0';
       txtpos++;
-    } 
-    while(*txtpos >= '0' && *txtpos <= '9');
+    } while(*txtpos >= '0' && *txtpos <= '9');
     return a;
   }
 
@@ -1571,8 +1491,7 @@ static short int expr4(void)
   {
     short int a;
     // Is it a variable reference (single alpha)
-    if(txtpos[1] < 'A' || txtpos[1] > 'Z')
-    {
+    if(txtpos[1] < 'A' || txtpos[1] > 'Z') {
       a = ((short int *)variables_begin)[*txtpos - 'A'];
       txtpos++;
       return a;
@@ -1833,7 +1752,7 @@ void doRun(int cmd, const char* arg) {
   
   unsigned char linelen;
   boolean isDigital;
-  boolean alsoWait = false;
+  //boolean alsoWait = false;
   int val;
 
 
@@ -2471,6 +2390,7 @@ assignment:
     *var = value;
   }
   goto run_next_statement;
+  
 poke:
   {
     short int value;
@@ -2601,7 +2521,7 @@ dwrite:
   {
     short int pinNo;
     short int value;
-    unsigned char *txtposBak;
+    //unsigned char *txtposBak;
 
     // Get the pin number
     expression_error = 0;
@@ -2616,8 +2536,7 @@ dwrite:
     txtpos++;
     ignore_blanks();
 
-
-    txtposBak = txtpos; 
+    //txtposBak = txtpos; 
     scantable(highlow_tab);
     if(table_index != HIGHLOW_UNKNOWN)
     {
@@ -2672,9 +2591,7 @@ ioInit: // INIT 8000 => as INIT, "COM:", 8000, "B"
   goto run_next_statement;
 
 ioInvert: 
-  serialInverted = !serialInverted;
-  if ( serialInverted ) { writeOnLCD(NULL,"Master is now", "  ALTSerial"); }
-  else                  { writeOnLCD(NULL,"Master is now", "     USB"); }
+  invertSerialPorts();
   goto run_next_statement;
 
 ioOut: // OUT 100 => as OUT #1,100
@@ -3395,12 +3312,6 @@ inchar_loadfinish:
   inhibitOutput = false;
 
   if( runAfterLoad ) {
-//    // Xts Xts Xts Xts Xts Xts 
-//    // for http execution
-//    bufferedOutput = false;
-//finishedLoad = true;
-//    // Xts Xts Xts Xts Xts Xts 
-    
     runAfterLoad = false;
     triggerRun = true;
   }
@@ -3473,8 +3384,7 @@ static void outchar(unsigned char c) {
 
 #if ARDUINO && ENABLE_FILEIO
 
-static int initSD( void )
-{
+static int initSD( void ) {
   // if the card is already initialized, we just go with it.
   // there is no support (yet?) for hot-swap of SD Cards. if you need to 
   // swap, pop the card, reset the arduino.)
@@ -3504,8 +3414,7 @@ static int initSD( void )
 
 #if ENABLE_FILEIO
 
-void cmd_Files( void )
-{
+void cmd_Files( void ) {
   File dir = SD.open( "/" );
   // XTase :: here is the trap ----
   dir.rewindDirectory();
