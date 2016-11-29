@@ -1,0 +1,5 @@
+10 FOR I =1 TO 5
+20 PRINT "web ";: PRINT I
+30 NEXT I
+40 FILES
+50 PRINT "Free Mem:";: PRINT FREE()

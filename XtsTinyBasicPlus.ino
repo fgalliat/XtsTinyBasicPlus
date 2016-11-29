@@ -199,11 +199,19 @@ bool WIFI_OK = false;
     long t0, t1;
     t0 = millis();
     emptyWifiBuff();
-    while( HWSERIAL.available() == 0 ) { t1 = millis(); if (t1-t0 > 1000) { break; } delay(1); }
+    while( HWSERIAL.available() == 0 ) { 
+      t1 = millis(); 
+      //if (t1-t0 > 1000) { break; } 
+      if (t1-t0 > 1000) { if (checkWifiFlag) { WIFI_OK = false; } return; } 
+      delay(1); 
+    }
     int readed = 0;
+    if (checkWifiFlag) { WIFI_OK = false; }
     do {
       readed = HWSERIAL.readBytesUntil(0x00, wifiBuff, WIFI_BUFF_SIZE);
-      if (checkWifiFlag) { WIFI_OK = readed > 0; }
+      // cause : can pass many times in this loop (the last will always return 0)
+      if (checkWifiFlag && !WIFI_OK) { WIFI_OK = readed > 0; }
+      
       if ( readed <= 0 ) { break; }
       if (outToScreen)   { writeOnLCD(" -= ESP 8266 says =- ", (const char*)wifiBuff); }
       if (outToSerial)   { Serial.println(wifiBuff); }
@@ -302,7 +310,7 @@ void openWebServerAndWait(bool defScr,bool defSer) {
     strcat( content, "<h1>Hello World from my Teensy ++2</h1>\n");
     strcat( content, "<table border=1><tr><td valign=top><pre>");
 
-    char b[50];
+    char b[30];
     char myChar;
     int slen = strlen_P((const char*)initmsg);
     for (int k = 0; k < slen; k++) { myChar =  pgm_read_byte_near(initmsg + k); b[k] = myChar; }
@@ -360,7 +368,6 @@ void openWebServerAndWait(bool defScr,bool defSer) {
     ////header += "\r\n\r\n";
 
     int headerlen = strlen( header ) + 4; // +4 for \r\n\r\n
-    //int contentLen = strlen( content );
     int contentLen = strlen(content)+strlen(openCode)+strlen(outputBuffer)+strlen(closeCode)+strlen(closeHtml);
 
     int ch_id = 0;
@@ -588,7 +595,12 @@ int eepos = 0;
 #define kSD_Fail  0
 #define kSD_OK    1
 
+// FOR AUTORUN / CHAIN / LOAD / SAVE commands
 File fp;
+// FOR FILES / CAT / WRITE commands
+File fpSdFiles;
+
+
 #endif
 
 // set up our RAM buffer size for program and user input
@@ -621,7 +633,25 @@ File fp;
 
 // Cf issue #18
 //#define kRamSize  (RAMEND - 1160 - kRamFileIO - kRamTones) 
-#define kRamSize  (RAMEND - 1200 - kRamFileIO - kRamTones - kRamLCD - kRamWIFI) 
+
+// Xts Xts Xts Xts Xts Xts Xts Xts Xts Xts Xts Xts 
+// the ONLY String variable of the TinyBasic
+
+// str var len
+#define STR_VAR_LEN 50
+// nb of str var
+#define STR_VAR_NB  4
+
+char strVar[STR_VAR_NB][STR_VAR_LEN];
+// vNum : 0 - 4
+void cleanStrVar(int vNum) { for(int i=0; i < STR_VAR_LEN; i++) { strVar[vNum][i] = 0x00; } }
+char* getStrVar(int vNum) { return strVar[vNum]; }
+
+//char strVar[STR_VAR_LEN];
+//void cleanStrVar() { for(int i=0; i < STR_VAR_LEN; i++) { strVar[i] = 0x00; } }
+// Xts Xts Xts Xts Xts Xts Xts Xts Xts Xts Xts Xts 
+
+#define kRamSize  (RAMEND - 1200 - (STR_VAR_LEN * STR_VAR_NB) - kRamFileIO - kRamTones - kRamLCD - kRamWIFI) 
 
 
 #ifndef ARDUINO
@@ -731,6 +761,10 @@ const static unsigned char keywords[] PROGMEM = {
   'R','E','T','U','R','N'+0x80,
   'R','E','M'+0x80,
   'F','O','R'+0x80,
+// Xts Xts Xts Xts Xts Xts Xts Xts 
+// must be placed before 'input'
+  'I','N','P','U','T','S','T','R'+0x80,
+// Xts Xts Xts Xts Xts Xts Xts Xts   
   'I','N','P','U','T'+0x80,
   'P','R','I','N','T'+0x80,
   'P','O','K','E'+0x80,
@@ -787,7 +821,7 @@ const static unsigned char keywords[] PROGMEM = {
   'D','E','L','E','T','E'+0x80,
   'C','A','T'+0x80,
   'W','R','I','T','E'+0x80,
-  
+ 
   0
 };
 
@@ -800,6 +834,9 @@ enum {
   KW_GOTO, KW_GOSUB, KW_RETURN,
   KW_REM,
   KW_FOR,
+// Xts Xts Xts Xts Xts Xts Xts Xts Xts 
+  KW_INPUTSTR,
+// Xts Xts Xts Xts Xts Xts Xts Xts Xts   
   KW_INPUT, KW_PRINT,
   KW_POKE,
   KW_STOP, KW_BYE,
@@ -869,7 +906,8 @@ const static unsigned char func_tab[] PROGMEM = {
   'F','R','E','E'+0x80,
   // function need to be defined even if not supported because those are indexed manually !!!
   'C','I','N','P'+0x80,     // read a char from SLAVE serial
-  'B','T','N'+0x80,         // retuens the state of userBtns if defined
+  'B','T','N'+0x80,         // returns the state of userBtns if defined
+  'S','T','R','L','E','N'+0x80, // return the length of the ONLY string var
 // Xtase extended functions <--
   0
 };
@@ -883,7 +921,9 @@ const static unsigned char func_tab[] PROGMEM = {
 #define FUNC_CINP    6
 #define FUNC_BTN     7
 
-#define FUNC_UNKNOWN 8
+#define FUNC_STRLEN  8
+
+#define FUNC_UNKNOWN 9
 
 const static unsigned char to_tab[] PROGMEM = {
   'T','O'+0x80,
@@ -1243,9 +1283,26 @@ static unsigned char lcd_print_quoted_string(short lineNum) {
 // Xts Xts Xts Xts Xts Xts Xts Xts Xts Xts 
 
 // can read up to 50 bytes
-char* get_quoted_string() {
+char* get_quoted_string(bool* needFreeAfter) {
   int i=0;
   unsigned char delim = *txtpos;
+
+  *needFreeAfter = false; 
+
+  // Xts : recall StrVar
+  if( delim == '$' ) { 
+    txtpos++; 
+    char c = *txtpos;
+    int strVarNum = 0;
+    if ( c >= '1' && c <= ('0'+STR_VAR_NB) ) {
+      strVarNum = (c-'0')-1;
+      txtpos++;
+      return getStrVar( strVarNum ); 
+    }
+
+    // default -> $1
+    return getStrVar(0); 
+  }
 
   if(delim != '"' && delim != '\'') return NULL;
   
@@ -1271,6 +1328,7 @@ char* get_quoted_string() {
   txtpos++; // Skip over the last delimiter
 
   // TODO : don't forget to free after
+  *needFreeAfter = true; 
   return charStr;
  }
 
@@ -1594,6 +1652,17 @@ static short int expr4(void)
       #else
         return -1;
       #endif
+
+    case FUNC_STRLEN:
+     int varNum = 0;
+     if ( a == -1 ) {
+      // no args - we take the first
+      varNum = 0;
+     } else {
+       if ( a < 1 || a > STR_VAR_NB ) { return -1; }
+       varNum = a-1;
+     }
+     return strlen( getStrVar(varNum) );
 // Xtase extended fcts =======
 
 
@@ -1760,6 +1829,7 @@ void loop() {
 void doRun(int cmd, const char* arg) {
   unsigned char *str;
   int len;
+  bool freeAfter = false;
   
   unsigned char linelen;
   boolean isDigital;
@@ -2108,6 +2178,8 @@ interperateAtTxtpos:
     goto sdCat;
   case KW_WRITE:
     goto sdWrite;
+  case KW_INPUTSTR:
+    goto inputStr;
 // XTase extended functions
 
   case KW_DEFAULT:
@@ -2931,7 +3003,8 @@ sdWrite:
     }
 
     // TODO : look for whiteSpaces
-    str = (unsigned char*)get_quoted_string();
+    freeAfter = false;
+    str = (unsigned char*)get_quoted_string(&freeAfter);
 
     if ( str == NULL ) Serial.println("Could not read quoted string");
     if ( str == NULL ) goto qwhat;
@@ -2942,11 +3015,14 @@ sdWrite:
       if ( str[i] == '\\' && i < len-1 && str[i+1] == 'n' ) { str[i] = 0x0D; str[i+1] = 0x0A; }
     }
 
-    fp = SD.open( (const char*)filename, FILE_WRITE );
-    fp.print( (const char*)str );
-    fp.close();
+    fpSdFiles = SD.open( (const char*)filename, FILE_WRITE );
+    fpSdFiles.print( (const char*)str );
+    fpSdFiles.close();
 
-    free( str );
+    if ( freeAfter ) {
+      // no need if it's a strVar....
+      free( str );
+    }
 
     goto run_next_statement;
  #else
@@ -2992,17 +3068,54 @@ sdCat:
 
     // remove the file if it exists
     if( SD.exists( (char *)filename )) {
-      fp = SD.open( (const char *)filename, FILE_READ );
-      while( fp.available() > 0 ) {
-        outchar( fp.read() );
+      fpSdFiles = SD.open( (const char *)filename, FILE_READ );
+      while( fpSdFiles.available() > 0 ) {
+        outchar( fpSdFiles.read() );
       }
-      fp.close();
+      fpSdFiles.close();
     }
     goto run_next_statement;
  #else
   goto unimplemented;
  #endif
  
+/*************************************************/
+
+inputStr:
+  // INPUSTR       --> $1
+  // INPUSTR {1-4} --> $1 to $4
+  int varNum = 0;
+
+  // Get the String variable index if any
+  expression_error = 0;
+  varNum = expression();
+
+  // optional argument
+  //if(expression_error) goto qwhat;
+  if(!expression_error) {
+    if (varNum < 1 || varNum > STR_VAR_NB) {
+      goto qhow;
+    }
+    varNum --;
+  } else {
+    varNum = 0;
+  }
+  // Get the String variable index if any
+  
+  cleanStrVar(varNum);
+  outchar('?'); outchar(' ');
+  int curs = 0;
+  while( true ) {
+    strVar[varNum][curs] = inchar();
+    outchar( strVar[varNum][curs] );
+    if ( curs >= STR_VAR_LEN-1 || strVar[varNum][curs] == CR || strVar[varNum][curs] == LF ) {
+      break;
+    }
+    curs++;
+  }
+  if ( strVar[varNum][curs] == CR || strVar[varNum][curs] == LF ) { strVar[varNum][curs] = 0x00; }
+  goto run_next_statement;
+
 /*************************************************/
 
 #ifdef ENABLE_TONES

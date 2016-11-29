@@ -41,6 +41,7 @@ so It **WILL NOT run on Arduino INO boards** ...
 
 ![Web + 2 serial ports control](/images/Web_2Serials.jpg)
 
+* Since 28/11/2016 : Started an experimental way to produce 4 String variables
 
 
 * previous authors of TinyBasic :

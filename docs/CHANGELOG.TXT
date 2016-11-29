@@ -1,7 +1,27 @@
+// va.15: 2016-11-29
+//      FIXED wifi enabled/disabled status
+//  --- Currently Experimental ---
+//      ALLOCATED 4 mem segments of 50bytes each for new string variables
+//      ADDED 4 String variables '$1' to '$4'
+//      MODIFIED STRLEN(1-4) func -> returns the len the the '$1' to '$4' String variable -> (if no params : $1)
+//      MODIFIED INPUTSTR 1-4 : input an str that goes in '$1' to '$4'  -> (if no params : $1)
+//
+//      $1-$4 parsed in get_quoted_string()
+//      TO FINISH --> print_quoted_string() // lcd_print_quoted_string()
+//  --- Currently Experimental ---
+//
+//
 // va.15: 2016-11-28
 //      ADDED : WRITE "<file>","<quoted_string\nable>" : appends "quoted_string" to "file"
-//              N.B.: can DELETE <file> before
-//              N.B.: Oups : TinyBasic doesn't support char variables ....
+//                N.B.: can DELETE <file> before
+//                N.B.: Oups : TinyBasic doesn't support char variables ....
+//
+//              INPUTSTR : input an str that goes in a unik str variable (50 bytes long max)
+//                to recall => use '$'
+//                works in get_quoted_string() .... -> LATER -> print_quoted_string() // lcd_print_quoted_string()
+//
+//              STRLEN() func -> returns the len (as cannot yet test the '$' 's value) (no arg @ this time)
+//
 //
 // va.15: 2016-11-26
 //      ADDED : BTN() func that returns 3-user-btns state if supported (else -1)
@@ -17,9 +37,9 @@
 //      ADDED : WRESET to reset the ESP8266
 //      ADDED : DELETE "<file>" to remove filr from sdcard
 //      ADDED : CAT "<file>" to list a file from sdcard w/o interpret it
-//      
-//      CHANGED BEHAVIOUR of FILES -> no more break the current PRGM (NOT a regular way for a BASIC !) 
-//      
+//
+//      CHANGED BEHAVIOUR of FILES -> no more break the current PRGM (NOT a regular way for a BASIC !)
+//
 //      ADDED : CINIT <bauds> -> init the alt. serialPort
 //      ADDED : COUT   -> send a byte to alt. serialPort
 //      ADDED : CLIST  -> list to alt. serialPort
@@ -27,8 +47,8 @@
 //      ADDED : CINV   -> invert UART Vs SoftwareSerial (but no for CINIT)
 //
 //      ADDED : CINP   -> waits a character from SLAVE serialPort
-//      
-//      
+//
+//
 //
 // v0.14: 2013-11-07
 //      Input command always set the variable to 99
@@ -88,7 +108,7 @@
 //  Integrated Jurg Wullschleger whitespace,unary fix
 //  Now available through github
 //  Project renamed from "Tiny Basic in C" to "TinyBasic Plus"
-//     
+//
 // v0.02b: 2012-09-17  Scott Lawrence <yorgle@gmail.com>
 //  Better FILES listings
 //
