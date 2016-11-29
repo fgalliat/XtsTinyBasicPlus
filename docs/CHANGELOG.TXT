@@ -3,11 +3,14 @@
 //  --- Currently Experimental ---
 //      ALLOCATED 4 mem segments of 50bytes each for new string variables
 //      ADDED 4 String variables '$1' to '$4'
-//      MODIFIED STRLEN(1-4) func -> returns the len the the '$1' to '$4' String variable -> (if no params : $1)
+//      MODIFIED STRLEN(1-4) func -> returns the len the '$1' to '$4' String variables -> (if no params : $1)
 //      MODIFIED INPUTSTR 1-4 : input an str that goes in '$1' to '$4'  -> (if no params : $1)
 //
 //      $1-$4 parsed in get_quoted_string()
-//      TO FINISH --> print_quoted_string() // lcd_print_quoted_string()
+//                      print_quoted_string()
+//                      lcd_print_quoted_string()
+// 
+//      TO FINISH -->  + ?lprint_quoted? --> write to otherSerial ??
 //  --- Currently Experimental ---
 //
 //

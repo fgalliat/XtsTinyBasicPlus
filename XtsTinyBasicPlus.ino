@@ -1142,6 +1142,24 @@ static unsigned short testnum(void) {
 static unsigned char print_quoted_string(void) {
   int i=0;
   unsigned char delim = *txtpos;
+
+  // Xts : recall StrVar
+  if( delim == '$' ) { 
+    txtpos++; 
+    char c = *txtpos;
+    int strVarNum = 0;
+    if ( c >= '1' && c <= ('0'+STR_VAR_NB) ) {
+      strVarNum = (c-'0')-1;
+      txtpos++;
+      printXts( (const unsigned char*) strVar[strVarNum] ); 
+      return 1;
+    }
+
+    // default -> $1
+    printXts( (const unsigned char*) strVar[0] ); 
+    return 1;
+  }
+  
   if(delim != '"' && delim != '\'')
     return 0;
   txtpos++;
@@ -1198,6 +1216,23 @@ static unsigned char print_quoted_string(void) {
 static unsigned char lcd_print_quoted_string(short lineNum) {
   int i=0;
   unsigned char delim = *txtpos;
+
+  // Xts : recall StrVar
+  if( delim == '$' ) { 
+    txtpos++; 
+    char c = *txtpos;
+    int strVarNum = 0;
+    if ( c >= '1' && c <= ('0'+STR_VAR_NB) ) {
+      strVarNum = (c-'0')-1;
+      txtpos++;
+      lcd_print(lineNum, 1, (char*) strVar[strVarNum] ); 
+      return 1;
+    }
+
+    // default -> $1
+    lcd_print(lineNum, 1, (char*) strVar[0] ); 
+    return 1;
+  }
 
   if(delim != '"' && delim != '\'') return 0;
   
@@ -1966,12 +2001,14 @@ interperateAtTxtpos:
     goto load;
   case KW_MEM:
     goto mem;
+    
   case KW_NEW:
     if(txtpos[0] != NL)
       goto qwhat;
     writeOnLCD(NULL, "NEW ....");
     program_end = program_start;
     goto prompt;
+    
   case KW_RUN:
     writeOnLCD(NULL, "Run ....");
     
