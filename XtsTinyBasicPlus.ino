@@ -23,6 +23,9 @@
 // Teensy ++2.0 mode
 #define teen2 1
 
+
+void printXts(const unsigned char *msg, bool altSerial = false);
+
 // ===== buttons support =====
 #define USER_BTNS_SUPPORT 1
 
@@ -142,7 +145,6 @@ int getFreeMem() {
 
   /** lineNum = 1 to 4 */
   void lcd_print(short lineNum, short col, char* str) {
-    
     display.setCursor( (6*(col-1)),( (lineNum-1) * 8) );
     display.println(str);
     display.display();
@@ -204,7 +206,6 @@ bool WIFI_OK = false;
     emptyWifiBuff();
     while( HWSERIAL.available() == 0 ) { 
       t1 = millis(); 
-      //if (t1-t0 > 1000) { break; } 
       if (t1-t0 > 1000) { if (checkWifiFlag) { WIFI_OK = false; } return; } 
       delay(1); 
     }
@@ -278,8 +279,6 @@ void waitFoClientConn(bool verbose = true) {
     do {
       readed = HWSERIAL.readBytesUntil(0x00, wifiBuff, WIFI_BUFF_SIZE);
       if ( readed <= 0 ) { break; }
-      //writeOnLCD(" -= ESP 8266 waits =- ", (const char*)wifiBuff);
-      //Serial.println(wifiBuff);
       emptyWifiBuff();
     } while (true);
     // ===== has received something =====
@@ -287,7 +286,6 @@ void waitFoClientConn(bool verbose = true) {
 
 const char* header =  "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: close\r\n"; 
 
-//#define webContentSize 1024
 #define webContentSize 512
 char content[webContentSize]; // the web page content
 
@@ -395,9 +393,6 @@ void openWebServerAndWait(bool defScr,bool defSer) {
 
     cleanOutBuff();
 
-    //free(content);
-    //content = NULL;
-
     writeOnLCD(" -= ESP 8266 sent =- ", "Served page");
     Serial.println("Served page on TCP:80");
 }
@@ -426,6 +421,9 @@ void openTelnetServerAndWait(bool defScr,bool defSer) {
 //    +IPD,0,1:o
 // ...
 //    +IPD,0,1:
+
+// can use scanf() to parse & separate values
+
     do {
       readed = HWSERIAL.readBytesUntil('/', wifiBuff, WIFI_BUFF_SIZE);
       if ( readed <= 0 ) { break; }
@@ -461,30 +459,41 @@ void openTelnetServerAndWait(bool defScr,bool defSer) {
 // _____________________________________
 
 // if (true) altSerial becomes MASTER
+// BEWARE : this is not the invert_logic FLAG
 bool serialInverted = false;
+
+// --> will make set the port speed (4800 or 8000) - invert logic - & set mode to 8N2
+// --> else 9600 / 19200 - no invert logic - & set mode to 8N1
+bool inX07mode = false;
+
+
 
 #ifdef ALT_SER_PORT
   // ADDED :
-  //   KW_INIT, KW_INP, KW_OUT,
+  //   KW_INIT, KW_INP, KW_COUT, --> CINIT / CINP / COUT / CPRINT
   //   KW_LLIST, KW_CPRINT,
-
-  //#define ALT_SER_PORT_X07_MODE 1
-  //#undef ALT_SER_PORT_X07_MODE
 
   
   #include "CustomSoftwareSerial_xtase.h"
-  #ifdef ALT_SER_PORT_X07_MODE
-   #define ALT_SER_PORT_SPEED 8000
-   CustomSoftwareSerialXts altSerial(9,10, true);
+
+  // define default most-case speed
+  // can up du 19200 --> 115200 : garbage on port (from CustomSerial.h)
+  #define ALT_SER_PORT_SPEED 9600
+  
+  // X-07 works @ this speed but need a pause between chars sent
+  // when in 'CMD' mode (because char processing is longer than in free-hand inputs)
+  #define ALT_SER_PORT_SPEED_X07 8000
+  //#define ALT_SER_PORT_SPEED_X07 4800
+  #define X07_DELAY_BETWEEN_CHAR 45
+
+  // even if will be X-07 mode, set invert_logic to false
+  // will set it @ setup() time
+  #ifdef teen2
+    CustomSoftwareSerialXts altSerial(26,25, false);
   #else
-   // can up du 19200 --> 115200 : garbage on port (from CustomSerial.h)
-   #define ALT_SER_PORT_SPEED 9600
-   #if defined(teen2)  
-     CustomSoftwareSerialXts altSerial(26,25, false);
-   #else
-     CustomSoftwareSerialXts altSerial(9,10, false);
-   #endif
+    CustomSoftwareSerialXts altSerial(9,10, false); 
   #endif
+
 
   void invertSerialPorts() {
     serialInverted = !serialInverted;
@@ -492,17 +501,12 @@ bool serialInverted = false;
     else                  { writeOnLCD(NULL,"Master is now", "     USB"); }
   }
 
-
-
 #endif
-
-
 
 // _____________________________________
 
 //#define XTS_CONSOLE_SPEED 115200
-// @ 115200 it fails !!!! 9600 fails too @ some characters
-// that was a memory lack issue
+// in teensy ++2.0 -> speed doesn't matter : we're in CDC-mode
 #define XTS_CONSOLE_SPEED 9600
 
 
@@ -637,7 +641,7 @@ char* getStrVar(int vNum) { return strVar[vNum]; }
 
 // Cf issue #18
 //#define kRamSize  (RAMEND - 1160 - kRamFileIO - kRamTones) 
-#define kRamSize  (RAMEND - 1200 - (STR_VAR_LEN * STR_VAR_NB) - kRamFileIO - kRamTones - kRamLCD - kRamWIFI) 
+#define kRamSize  (RAMEND - 1200 - (STR_VAR_LEN * STR_VAR_NB) - (kRamFileIO+50) - kRamTones - kRamLCD - kRamWIFI) 
 
 // for PC Setup (not sure that it still work....)
 #ifndef ARDUINO
@@ -789,6 +793,7 @@ const static unsigned char keywords[] PROGMEM = {
   'C','L','I','S','T'+0x80,
   'C','P','R','I','N','T'+0x80,
   'C','I','N','V'+0x80, // invert hard Vs soft serial
+  'O','U','T'+0x80, // as COUT but on master UART
 #endif
 
 // Xtase Esp8266 Wifi routines
@@ -804,7 +809,7 @@ const static unsigned char keywords[] PROGMEM = {
 #endif
 
 
-// Xtase extended functions
+// Xtase extended functions for SDCard
   'D','E','L','E','T','E'+0x80,
   'C','A','T'+0x80,
   'W','R','I','T','E'+0x80,
@@ -845,9 +850,10 @@ enum {
 #endif
 
 #ifdef ALT_SER_FILE
-  KW_INIT, KW_OUT,
+  KW_INIT, KW_COUT,
   KW_LLIST, KW_CPRINT,
   KW_CINV,
+  KW_OUT, // as cout but on master
 #endif
 
 #ifdef WIFI_SUPPORT
@@ -892,7 +898,8 @@ const static unsigned char func_tab[] PROGMEM = {
 // Xtase extended functions -->
   'F','R','E','E'+0x80,
   // function need to be defined even if not supported because those are indexed manually !!!
-  'C','I','N','P'+0x80,     // read a char from SLAVE serial
+  'C','I','N','P'+0x80,     // wait a char from SLAVE serial
+  'I','N','P'+0x80,         // wait a char from MASTER serial
   'B','T','N'+0x80,         // returns the state of userBtns if defined
   'S','T','R','L','E','N'+0x80, // return the length of the ONLY string var
 // Xtase extended functions <--
@@ -906,11 +913,12 @@ const static unsigned char func_tab[] PROGMEM = {
 
 #define FUNC_FREE    5
 #define FUNC_CINP    6
-#define FUNC_BTN     7
+#define FUNC_INP     7
+#define FUNC_BTN     8
 
-#define FUNC_STRLEN  8
+#define FUNC_STRLEN  9
 
-#define FUNC_UNKNOWN 9
+#define FUNC_UNKNOWN 10
 
 const static unsigned char to_tab[] PROGMEM = {
   'T','O'+0x80,
@@ -1365,6 +1373,25 @@ void lprintnum(int num) {
 static unsigned char lprint_quoted_string(void) {
   int i=0;
   unsigned char delim = *txtpos;
+
+  // Xts : recall StrVar
+  if( delim == '$' ) { 
+    txtpos++; 
+    char c = *txtpos;
+    int strVarNum = 0;
+    if ( c >= '1' && c <= ('0'+STR_VAR_NB) ) {
+      strVarNum = (c-'0')-1;
+      txtpos++;
+      printXts( (const unsigned char*) strVar[strVarNum], true ); 
+      return 1;
+    }
+
+    // default -> $1
+    printXts( (const unsigned char*) strVar[0], true ); 
+    return 1;
+  }
+
+  
   if(delim != '"' && delim != '\'')
     return 0;
   txtpos++;
@@ -1387,10 +1414,11 @@ static unsigned char lprint_quoted_string(void) {
 }
 
 
-void printXts(const unsigned char *msg) {
+void printXts(const unsigned char *msg, bool altSerial) {
   int len = strlen( (const char*)msg );
   for(int i=0; i < len; i++) {
-    outchar( msg[i] );
+    if ( !altSerial ) { outchar( msg[i] ); }
+    else              { l_outchar( msg[i] ); }
   }
 }
 
@@ -1588,6 +1616,20 @@ static short int expr4(void) {
     case FUNC_CINP:
       // wait a char from SLAVE
       if ( serialInverted ) {
+        while(!Serial.available()) {;} 
+        #if ECHO_CHARS > 0
+          Serial.read();
+          while(!Serial.available()) {;} 
+        #endif        
+        return Serial.read();
+      } else {
+        while(!altSerial.available()) {;} 
+        return altSerial.read();
+      }
+      
+    case FUNC_INP:
+      // wait a char from MASTER
+      if ( !serialInverted ) {
         while(!Serial.available()) {;} 
         #if ECHO_CHARS > 0
           Serial.read();
@@ -2103,8 +2145,10 @@ interperateAtTxtpos:
 #ifdef ALT_SER_FILE
   case KW_INIT:
     goto ioInit;
+  case KW_COUT:
+    goto ioOutSlave;
   case KW_OUT:
-    goto ioOut;
+    goto ioOutMaster;
   case KW_LLIST:
     goto ioList;
   case KW_CPRINT:
@@ -2631,7 +2675,7 @@ ioInvert:
   invertSerialPorts();
   goto run_next_statement;
 
-ioOut: // OUT 100 => as OUT #1,100
+ioOutSlave: // OUT 100 => as OUT #1,100
     // Get the value to send
     short value;
     expression_error = 0;
@@ -2640,7 +2684,28 @@ ioOut: // OUT 100 => as OUT #1,100
       goto qwhat;
 
     #ifdef ALT_SER_PORT
-      altSerial.write( value );
+      if ( !serialInverted ) {
+        altSerial.write( value );
+      } else {
+        Serial.write( value );
+      }
+    #endif
+  goto run_next_statement;
+
+ioOutMaster: // OUT 100 => as OUT #1,100 but on MASTER UART
+    // Get the value to send
+    //short value;
+    expression_error = 0;
+    value = expression();
+    if(expression_error)
+      goto qwhat;
+
+    #ifdef ALT_SER_PORT
+      if ( !serialInverted ) {
+        Serial.write( value );
+      } else {
+        altSerial.write( value );
+      }
     #endif
   goto run_next_statement;
 
@@ -2675,8 +2740,7 @@ ioPrint: // LPRINT as PRINT #1, ....
   while(1)
   {
     ignore_blanks();
-    if(lprint_quoted_string())
-    {
+    if(lprint_quoted_string()) {
       ;
     }
     else if(*txtpos == '"' || *txtpos == '\'')
@@ -3171,8 +3235,10 @@ static void line_terminator(void)
 
 void setup() {
 
-  // the FUTUR X07 mode pin
+  // the X07 software mode selection pin
+  // beware : inverted state because of pullUp
   pinMode( 14, INPUT_PULLUP );
+  inX07mode = digitalRead( 14 ) == LOW;
 
 
 #ifdef USER_BTNS_SUPPORT
@@ -3183,24 +3249,28 @@ void setup() {
 
 
 #ifdef WIFI_SUPPORT
-  //outputBuffer = (char*)malloc( OUT_BUFF_LEN );
   cleanOutBuff();
 #endif
 
   
 #ifdef ARDUINO
+  // DO NOT manipulate the switch when board is already powered on
   #if defined(ALT_SER_PORT)
-    #ifdef ALT_SER_PORT_X07_MODE 
-      altSerial.begin(ALT_SER_PORT_SPEED, CSERIAL_8N2);
-    #else
+    if ( inX07mode ) {
+      altSerial.setInvertLogic(true);
+      altSerial.begin(ALT_SER_PORT_SPEED_X07, CSERIAL_8N2);
+    } else {
+      // BEWARE : no Hardware Flow Control
       //altSerial.begin(ALT_SER_PORT_SPEED, CSERIAL_8N1);
+      altSerial.setInvertLogic(false);
       altSerial.begin(ALT_SER_PORT_SPEED);
-    #endif
+    }
+    altSerial.listen();
   #endif
 
   Serial.begin(kConsoleBaud); // opens serial port
 
-#if defined(LCD_SUPPORT)
+ #if defined(LCD_SUPPORT)
   // by default, we'll generate the high voltage from the 3.3v line internally! (neat!)
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C);  // initialize with the I2C addr 0x3D (for the 128x64)
   // display firware splash screen
@@ -3223,12 +3293,12 @@ void setup() {
   #ifdef WIFI_SUPPORT
     HWSERIAL.begin(115200);
     sendPassiveCmdToWifi("AT+GMR", true, false, true);
-    delay(500);
+    delay(200);
   #endif
 
   startupScreen();
   
-#endif
+ #endif
 
 //  // TODO keep or not ?
 //  while( !Serial ); // for Leonardo
@@ -3245,44 +3315,50 @@ void setup() {
       printXts((const unsigned char*)"WIFI disabled\n");
     }
   #endif
+
+   if ( inX07mode ) {
+      printXts((const unsigned char*)"X07 enabled\n");
+   } else {
+      printXts((const unsigned char*)"UART enabled\n");
+   }
+
   
   
-#ifdef ENABLE_FILEIO
+ #ifdef ENABLE_FILEIO
   initSD();
   
-#ifdef ENABLE_AUTORUN
-  if( SD.exists( kAutorunFilename )) {
+  #ifdef ENABLE_AUTORUN
+   if( SD.exists( kAutorunFilename )) {
     program_end = program_start;
     fp = SD.open( kAutorunFilename );
     inStream = kStreamFile;
     inhibitOutput = true;
     runAfterLoad = true;
-  }
-#endif /* ENABLE_AUTORUN */
+   }
+  #endif /* ENABLE_AUTORUN */
 
-#endif /* ENABLE_FILEIO */
+ #endif /* ENABLE_FILEIO */
 
-#ifdef ENABLE_EEPROM
-#ifdef ENABLE_EAUTORUN
-  // read the first byte of the eeprom. if it's a number, assume it's a program we can load
-  int val = EEPROM.read(0);
-  if( val >= '0' && val <= '9' ) {
-    program_end = program_start;
-    inStream = kStreamEEProm;
-    eepos = 0;
-    inhibitOutput = true;
-    runAfterLoad = true;
-  }
-#endif /* ENABLE_EAUTORUN */
-#endif /* ENABLE_EEPROM */
+ #ifdef ENABLE_EEPROM
+  #ifdef ENABLE_EAUTORUN
+   // read the first byte of the eeprom. if it's a number, assume it's a program we can load
+   int val = EEPROM.read(0);
+   if( val >= '0' && val <= '9' ) {
+     program_end = program_start;
+     inStream = kStreamEEProm;
+     eepos = 0;
+     inhibitOutput = true;
+     runAfterLoad = true;
+    }
+  #endif /* ENABLE_EAUTORUN */
+ #endif /* ENABLE_EEPROM */
 
 #endif /* ARDUINO */
 }
 
 
 /***********************************************************/
-static unsigned char breakcheck(void)
-{
+static unsigned char breakcheck(void) {
 #ifdef ARDUINO
   if ( !serialInverted ) {
     if(Serial.available()) return Serial.read() == CTRLC;
@@ -3334,14 +3410,23 @@ static int inchar()
      break;
   case( kStreamSerial ):
   default:
-    while(1)
-    {
-      if ( !serialInverted ) {
-        if(Serial.available()) return Serial.read();
-      } else {
-        if(altSerial.available()) return altSerial.read();
-      }
-    }
+//    while(1)
+//    {
+//      if ( !serialInverted ) {
+//        if(Serial.available()) return Serial.read();
+//      } else {
+//        if(altSerial.available()) return altSerial.read();
+//      }
+//    }
+
+
+ if ( !serialInverted ) {
+  while(Serial.available()==0) {}; return Serial.read();
+ } else {
+  while(altSerial.available()==0) {}; return altSerial.read();
+ }
+
+
   }
   
 inchar_loadfinish:
@@ -3372,6 +3457,7 @@ static void l_outchar(unsigned char c) {
     //altSerial.write(c);
     if ( !serialInverted ) {
       altSerial.write(c);
+      if ( inX07mode ) { delay(X07_DELAY_BETWEEN_CHAR); }
     } else {
       Serial.write(c);
     }
@@ -3402,8 +3488,11 @@ static void outchar(unsigned char c) {
     if ( !bufferedOutput ) {
       if ( !serialInverted ) {
         Serial.write(c);
+        Serial.flush();
       } else {
         altSerial.write(c);
+        if ( inX07mode ) { delay(X07_DELAY_BETWEEN_CHAR); }
+        //altSerial.flush();
       }
     } else {
       //outputBuffer += (char)c;
@@ -3466,7 +3555,8 @@ void cmd_Files( void ) {
     }
 
     // common header
-    printmsgNoNL( indentmsg );
+    //printmsgNoNL( indentmsg );
+    
 // Moa Moa Moa Moa
     //printmsgNoNL( (const unsigned char *)entry.name() );
     printXts( (const unsigned char *)entry.name() );
@@ -3478,14 +3568,14 @@ void cmd_Files( void ) {
 
     if( entry.isDirectory() ) {
       // directory ending
-      for( int i=strlen( entry.name()) ; i<16 ; i++ ) {
+      for( int i=strlen( entry.name()) ; i<12 ; i++ ) {
         printmsgNoNL( spacemsg );
       }
       printmsgNoNL( dirextmsg );
     }
     else {
       // file ending
-      for( int i=strlen( entry.name()) ; i<17 ; i++ ) {
+      for( int i=strlen( entry.name()) ; i<15 ; i++ ) {
         printmsgNoNL( spacemsg );
       }
       printUnum( entry.size() );

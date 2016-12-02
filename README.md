@@ -1,8 +1,8 @@
 # XtsTinyBasicPlus
 
-a fork of TinyBasic for Arduino by Xtase (fgalliat) @Nov 2016
+a fork of -TinyBasic for Arduino- by Xtase (fgalliat) @Nov 2016
 
-It actually uses ~42KB of flash & 7K of RAM (statically allocated)<br/>
+It actually uses ~43KB of flash & 7K of RAM (statically allocated)<br/>
 so It **WILL NOT run on Arduino INO boards** ...
 
 (It's an early stage work, so it's dirty & not well documented)

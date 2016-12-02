@@ -1,5 +1,25 @@
+// va.15: 2016-12-02
+//
+//      CONNECTED & TUNE a bit the code in order to work w/ Canon X-07 SerialPort
+//        it works well @ 8000bps ! Yeah :) (but need a between-char pause ;( )
+//
+// va.15: 2016-12-01
+//      ADDED OUT x -> that outputs chr(x) to MASTER Uart (as COUT x)
+//      FIXED CPRINT <expr> now supports '$1' to '$4'
+//      ADDED INP() -> that waits a char FROM MASTER Uart (as a=CINP() )
+//
+//      -> TODO : CINPUTSTR 1-4
+//      -> TODO : VARCHAR assignment (@ this time : only by INPUTSTR)
+//      -> TODO : VARCHAR Ops : @least concat by '+'
+//
+//      -> cos, sin, tan functions w/ predefined values tables in degrees (use PROGMEM)
+//      -> LCD plot pixel ???
+//
+// va.15: 2016-11-30
+//      ADDED support for X07 UART mode switch (DO not manipulate when board is already powered on)
+//      
 // va.15: 2016-11-29
-//      FIXED wifi enabled/disabled status
+//      FIXED wifi enabled/disabled status detection
 //  --- Currently Experimental ---
 //      ALLOCATED 4 mem segments of 50bytes each for new string variables
 //      ADDED 4 String variables '$1' to '$4'
@@ -10,7 +30,6 @@
 //                      print_quoted_string()
 //                      lcd_print_quoted_string()
 // 
-//      TO FINISH -->  + ?lprint_quoted? --> write to otherSerial ??
 //  --- Currently Experimental ---
 //
 //

@@ -391,6 +391,14 @@ void CustomSoftwareSerialXts::setRX(uint8_t rx)
 // Public methods
 //
 
+
+// Xts Xts Xts Xts Xts Xts Xts Xts 
+  // BEWARE : must be called before any Ops
+  void CustomSoftwareSerialXts::setInvertLogic( bool inverse_logic ) {
+    _inverse_logic = inverse_logic;
+  }
+// Xts Xts Xts Xts Xts Xts Xts Xts 
+
 void CustomSoftwareSerialXts::begin(long speed)
 {
   _rx_delay_centering = _rx_delay_intrabit = _rx_delay_stopbit = _tx_delay = 0;

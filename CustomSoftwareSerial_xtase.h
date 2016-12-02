@@ -126,6 +126,11 @@ public:
   // public methods
   CustomSoftwareSerialXts(uint8_t receivePin, uint8_t transmitPin, bool inverse_logic = false);
   ~CustomSoftwareSerialXts();
+
+// Xts Xts Xts Xts Xts Xts Xts Xts 
+  void setInvertLogic( bool inverse_logic );
+// Xts Xts Xts Xts Xts Xts Xts Xts 
+
   void begin(long speed);
   void begin(long speed, uint16_t configuration);
   bool listen();
