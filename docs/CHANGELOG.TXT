@@ -1,7 +1,10 @@
 // va.15: 2016-12-02
 //
-//      CONNECTED & TUNE a bit the code in order to work w/ Canon X-07 SerialPort
+//      CONNECTED & TUNED a bit the code in order to work w/ Canon X-07 SerialPort
 //        it works well @ 8000bps ! Yeah :) (but need a between-char pause ;( )
+//        have to find an equiv to |save "toto.bas"| (from the X-07 to uSD) .. in progress ..
+//
+//      ADDED parse of $1-$4 in filename expressions
 //
 // va.15: 2016-12-01
 //      ADDED OUT x -> that outputs chr(x) to MASTER Uart (as COUT x)

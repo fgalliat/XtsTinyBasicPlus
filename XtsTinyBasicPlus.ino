@@ -478,7 +478,10 @@ bool inX07mode = false;
 
   // define default most-case speed
   // can up du 19200 --> 115200 : garbage on port (from CustomSerial.h)
+  // PS. can write '115200' in tinybasic (higher than 'short int')
+  //#define ALT_SER_PORT_SPEED 115200 // garbage !!!
   #define ALT_SER_PORT_SPEED 9600
+  //#define ALT_SER_PORT_SPEED 19200 // max 
   
   // X-07 works @ this speed but need a pause between chars sent
   // when in 'CMD' mode (because char processing is longer than in free-hand inputs)
@@ -3194,11 +3197,18 @@ static int isValidFnChar( char c )
   return 0;
 }
 
-unsigned char * filenameWord()
-{
+unsigned char * filenameWord() {
   // SDL - I wasn't sure if this functionality existed above, so I figured i'd put it here
   unsigned char * ret = txtpos;
   expression_error = 0;
+
+  // TODO : manager whitespaces.... but not '"'
+  if ( *txtpos == '$' && *(txtpos+1) >= '1' && *(txtpos+1) <= '4' ) {
+    int vNum = (*(txtpos+1) - '0') - 1;
+    txtpos+=2;
+    return (unsigned char*)strVar[vNum];
+  }
+
 
   // make sure there are no quotes or spaces, search for valid characters
   //while(*txtpos == SPACE || *txtpos == TAB || *txtpos == SQUOTE || *txtpos == DQUOTE ) txtpos++;
@@ -3212,6 +3222,8 @@ unsigned char * filenameWord()
 
   // now, find the next nonfnchar
   txtpos++;
+
+  
   while( isValidFnChar( *txtpos )) txtpos++;
   if( txtpos != ret ) *txtpos = '\0';
 
@@ -3316,11 +3328,15 @@ void setup() {
     }
   #endif
 
+   char* str = (char*)malloc( 20 );
    if ( inX07mode ) {
-      printXts((const unsigned char*)"X07 enabled\n");
+      sprintf(str, "X07 mode @%d\n",ALT_SER_PORT_SPEED_X07);
    } else {
-      printXts((const unsigned char*)"UART enabled\n");
+      sprintf(str, "UART mode @%d\n",ALT_SER_PORT_SPEED);
    }
+   printXts((const unsigned char*)str);
+   free(str);
+   str = NULL;
 
   
   
