@@ -1034,7 +1034,7 @@ static const unsigned char spacemsg[]         PROGMEM = " ";
 
 
 static int inchar(void);
-static void outchar(unsigned char c);
+static void outchar(unsigned char c, bool verySlow = false);
 static void line_terminator(void);
 static short int expression(void);
 static unsigned char breakcheck(void);
@@ -3091,7 +3091,10 @@ sdCat:
     if( SD.exists( (char *)filename )) {
       fpSdFiles = SD.open( (const char *)filename, FILE_READ );
       while( fpSdFiles.available() > 0 ) {
-        outchar( fpSdFiles.read() );
+        //outchar( fpSdFiles.read(), true );
+        char ch = fpSdFiles.read();
+        if (ch == 10 && serialInverted && inX07mode) { outchar( 13 ); }
+        outchar( ch );
       }
       fpSdFiles.close();
     }
@@ -3481,7 +3484,7 @@ static void l_outchar(unsigned char c) {
 }
 // Xts Xts Xts Xts Xts Xts Xts
 
-static void outchar(unsigned char c) {
+static void outchar(unsigned char c,bool verySlow) {
   if( inhibitOutput ) return;
 
 #ifdef ARDUINO
@@ -3508,6 +3511,7 @@ static void outchar(unsigned char c) {
       } else {
         altSerial.write(c);
         if ( inX07mode ) { delay(X07_DELAY_BETWEEN_CHAR); }
+        if ( verySlow )  { delay(X07_DELAY_BETWEEN_CHAR); }
         //altSerial.flush();
       }
     } else {

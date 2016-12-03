@@ -1,3 +1,8 @@
+// va.15: 2016-12-03
+//      NOW ABLE to load a PRG from SD to X-07
+//           with [XTBP] : LOADER.BAS
+//                [X-07] : "LOADSD.TXT"
+//
 // va.15: 2016-12-02
 //
 //      CONNECTED & TUNED a bit the code in order to work w/ Canon X-07 SerialPort
