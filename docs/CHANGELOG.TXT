@@ -8,7 +8,7 @@
 //                                => by default : this cmd appends to existing file
 //                                => U will have to DELETE <filaname> before if want a clean file
 //
-//      NOW ABLE to save a PRG from X-07 to SD
+//      NOW ABLE to save a PRG from X-07 to SD w/ some bugs ;(
 //                [X-07] : RUN "SV2SD"
 //
 // va.15: 2016-12-02

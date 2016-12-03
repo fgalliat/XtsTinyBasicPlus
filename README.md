@@ -43,7 +43,7 @@ so It **WILL NOT run on Arduino INO boards** ...
 
 * Since 11/28/2016 : Started an experimental way to produce 4 String variables
 
-* Since 12/03/2016 : **Support now fully Canon X-07 PRGs writing to/reading from uSDCard**<br/>
+* Since 12/03/2016 : **Support now (w/ a few bugs anyway) Canon X-07 PRGs writing to/reading from uSDCard**<br/>
   See basic_source/loader.bas & X07_source/LOADSD.TXT & SV2SD.TXT
 ![Canon X-07 & the 'black box'](/images/X07_Teensy.jpg)
 
