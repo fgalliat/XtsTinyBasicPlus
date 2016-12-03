@@ -487,7 +487,7 @@ bool inX07mode = false;
   // when in 'CMD' mode (because char processing is longer than in free-hand inputs)
   #define ALT_SER_PORT_SPEED_X07 8000
   //#define ALT_SER_PORT_SPEED_X07 4800
-  #define X07_DELAY_BETWEEN_CHAR 45
+  #define X07_DELAY_BETWEEN_CHAR 90
 
   // even if will be X-07 mode, set invert_logic to false
   // will set it @ setup() time
@@ -3083,8 +3083,8 @@ sdWriteLong:
 
     fpSdFiles = SD.open( (const char*)filename, FILE_WRITE );
 
-    if ( serialInverted ) { while(altSerial.available() == 0) {;} }
-    else                  { while(Serial.available() == 0) {;} }
+    if ( serialInverted ) { while(altSerial.available() == 0) {;} altSerial.setTimeout(3000); }
+    else                  { while(Serial.available() == 0) {;} Serial.setTimeout(3000); }
     
     while(true) {
       memset(line, 0x00, lineLen);
@@ -3364,11 +3364,11 @@ void setup() {
   display.setTextColor(WHITE);
 
   display.setCursor(0,0);
-  display.println("Hello, world!");
-  display.println("12345678901234567890");
-  display.println("12345678901234567890");
-  display.println("12345678901234567890");
-  display.display();
+//  display.println("Hello, world!");
+//  display.println("12345678901234567890");
+//  display.println("12345678901234567890");
+//  display.println("12345678901234567890");
+//  display.display();
   
   #ifdef WIFI_SUPPORT
     HWSERIAL.begin(115200);
