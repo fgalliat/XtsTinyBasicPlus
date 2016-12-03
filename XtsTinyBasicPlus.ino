@@ -815,7 +815,8 @@ const static unsigned char keywords[] PROGMEM = {
 // Xtase extended functions for SDCard
   'D','E','L','E','T','E'+0x80,
   'C','A','T'+0x80,
-  'W','R','I','T','E'+0x80,
+  'W','R','I','T','E','T','X','T'+0x80, // WRITETXT <filename> ?...
+  'W','R','I','T','E'+0x80,             // WRITE <filename>,<string\nable>
  
   0
 };
@@ -872,6 +873,7 @@ enum {
 // Xtase extended functions
   KW_DELETE,
   KW_CAT,
+  KW_WRITE_TXT,
   KW_WRITE,
 
   KW_DEFAULT /* always the final one*/
@@ -1829,6 +1831,12 @@ void doRun(int cmd, const char* arg) {
   unsigned char *str;
   int len;
   bool freeAfter = false;
+
+  // variables for sdWriteLong (WRITETXT instr.)
+  const int lineLen = 128;
+  char* line = NULL;
+  int lineCursor = 0;
+
   
   unsigned char linelen;
   boolean isDigital;
@@ -1969,9 +1977,6 @@ prompt:
     }
     program_end = newEnd;
   }
-
-  
-  
   goto prompt;
 
 unimplemented:
@@ -2181,6 +2186,8 @@ interperateAtTxtpos:
     goto sdCat;
   case KW_WRITE:
     goto sdWrite;
+  case KW_WRITE_TXT:
+    goto sdWriteLong;
   case KW_INPUTSTR:
     goto inputStr;
 // XTase extended functions
@@ -3051,7 +3058,60 @@ sdWrite:
  #endif
 
 
+sdWriteLong:
+ #ifdef ENABLE_FILEIO
+    // appends text to text file
+ 
+    //unsigned char *filename;
+    // Work out the filename
+    expression_error = 0;
+    filename = filenameWord();
+    if(expression_error) goto qwhat;
 
+    //                1234567890123456789
+    writeOnLCD(NULL, "WRITE to SD", (const char*)filename);
+
+    // Cf end of filenameWord()
+    if ( *txtpos == '\0' ) {
+      txtpos++;
+    }
+
+    outchar(13);outchar(10);outchar('?');
+    
+    line = (char*)malloc(lineLen);
+    lineCursor = 0;
+
+    fpSdFiles = SD.open( (const char*)filename, FILE_WRITE );
+    while(true) {
+      memset(line, 0x00, lineLen);
+      lineCursor = 0;
+      while(true) {
+        // BEWARE : doesn't ECHO
+        int ch = inchar();
+        line[ lineCursor ] = ch;
+        lineCursor++;
+        if ( ch == 0x0D && !( serialInverted && inX07mode ) ) { break; }
+        if ( ch == 0x0A ) { break; }
+        if ( lineCursor >= lineLen-1 ) { break; }
+      }
+      if (  lineCursor == 1 ) {
+        // so only a CR - (blank line) => end of file
+        break;
+      }
+      fpSdFiles.print( (const char*)line );
+      //outchar(10);outchar('?');
+    }
+    fpSdFiles.close();
+
+    free(line);
+    line = NULL;
+
+    writeOnLCD(NULL, "WRITEN to SD", (const char*)filename);
+
+    goto run_next_statement;
+ #else
+  goto unimplemented;
+ #endif
 
 sdDelete:
  #ifdef ENABLE_FILEIO

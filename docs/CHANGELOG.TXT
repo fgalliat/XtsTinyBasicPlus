@@ -1,7 +1,15 @@
 // va.15: 2016-12-03
 //      NOW ABLE to load a PRG from SD to X-07
 //           with [XTBP] : LOADER.BAS
-//                [X-07] : "LOADSD.TXT"
+//                [X-07] : RUN "LOADSD"
+//
+//      ADDED WRITETXT <filename> => prompts for text (w/ no ECHO)
+//                                => a blank line closes the file
+//                                => by default : this cmd appends to existing file
+//                                => U will have to DELETE <filaname> before if want a clean file
+//
+//      NOW ABLE to save a PRG from X-07 to SD
+//                [X-07] : RUN "SV2SD"
 //
 // va.15: 2016-12-02
 //
