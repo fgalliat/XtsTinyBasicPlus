@@ -3082,25 +3082,30 @@ sdWriteLong:
     lineCursor = 0;
 
     fpSdFiles = SD.open( (const char*)filename, FILE_WRITE );
+
+    if ( serialInverted ) { while(altSerial.available() == 0) {;} }
+    else                  { while(Serial.available() == 0) {;} }
+    
     while(true) {
       memset(line, 0x00, lineLen);
       lineCursor = 0;
-      while(true) {
-        // BEWARE : doesn't ECHO
-        int ch = inchar();
-        line[ lineCursor ] = ch;
-        lineCursor++;
-        if ( ch == 0x0D && !( serialInverted && inX07mode ) ) { break; }
-        if ( ch == 0x0A ) { break; }
-        if ( lineCursor >= lineLen-1 ) { break; }
-      }
+
+      // BEWARE : doesn't ECHO
+      // ALWAYS missing the last line of the listing
+
+      char chBreak = ( serialInverted && inX07mode ) ? 0x0A : 0x0D;
+      if ( serialInverted ) { lineCursor = altSerial.readBytesUntil( chBreak, line, lineLen )+1; }
+      else                  { lineCursor = Serial.readBytesUntil( chBreak, line, lineLen )+1; }
+
+      fpSdFiles.println( (const char*)line );
       if (  lineCursor == 1 ) {
         // so only a CR - (blank line) => end of file
         break;
       }
-      fpSdFiles.print( (const char*)line );
+      //fpSdFiles.println( (const char*)line );
       //outchar(10);outchar('?');
     }
+    fpSdFiles.flush();
     fpSdFiles.close();
 
     free(line);
